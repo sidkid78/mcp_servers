@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "smart-dev-env": {
+      "command": "python",
+      "args": [
+        "C:\\Users\\sidki\\source\\repos\\finale\\mcp-servers\\smart-dev-env\\server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:\\Users\\sidki\\source\\repos\\finale\\mcp-servers\\smart-dev-env"
+      }
+    }
+  }
+}
