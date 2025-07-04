@@ -54,23 +54,28 @@ class Calculator:
 
 
 def main():
-    """Main function for testing."""
+    """Main demo function with logging instead of debug prints."""
+    import logging
+    
+    # Configure logging
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
+    logger = logging.getLogger(__name__)
+    
     calc = Calculator()
-
-    # Some example calculations
-    print("Calculator Demo")
-    print("===============")
-
-    print(f"5 + 3 = {calc.add(5, 3)}")
-    print(f"10 - 4 = {calc.subtract(10, 4)}")
-    print(f"6 * 7 = {calc.multiply(6, 7)}")
-    print(f"15 / 3 = {calc.divide(15, 3)}")
-
-    print(f"Factorial of 5 = {calculate_factorial(5)}")
-
-    print("\nCalculation History:")
+    
+    logger.info("Calculator Demo")
+    logger.info("===============")
+    
+    logger.info(f"5 + 3 = {calc.add(5, 3)}")
+    logger.info(f"10 - 4 = {calc.subtract(10, 4)}")
+    logger.info(f"6 * 7 = {calc.multiply(6, 7)}")
+    logger.info(f"15 / 3 = {calc.divide(15, 3)}")
+    
+    logger.info(f"Factorial of 5 = {calculate_factorial(5)}")
+    
+    logger.info("\nCalculation History:")
     for entry in calc.get_history():
-        print(f"  {entry}")
+        logger.info(f"  {entry}")
 
 
 if __name__ == "__main__":

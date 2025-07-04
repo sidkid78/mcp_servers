@@ -4,9 +4,10 @@ Execute test suites with detailed reporting.
 """
 
 import subprocess
+import json
+import os
 from pathlib import Path
 from typing import Dict, List
-import json
 
 
 async def run_tests_tool(
@@ -15,545 +16,223 @@ async def run_tests_tool(
     """
     Execute test suites with detailed reporting.
     """
-
     try:
-        # Validate test path
-        target_path = Path(test_path)
-        if not target_path.exists():
-            return {"error": f"Test path does not exist: {test_path}"}
+        path = Path(test_path)
+        if not path.exists():
+            return {
+                "error": f"Test path does not exist: {test_path}",
+                "suggestion": "Verify the path to your test files or test directory",
+            }
 
-        # Detect test framework and run appropriate tests
-        test_framework = await _detect_test_framework(target_path)
-
-        if test_framework == "unknown":
-            return {"error": "No supported test framework detected"}
-
-        # Execute tests based on framework and type
-        test_results = await _execute_tests(
-            test_framework, target_path, test_type, coverage
-        )
-
-        return test_results
-
+        # Detect test framework and choose appropriate runner
+        framework = await _detect_test_framework(path)
+        runners = {
+            "pytest": _run_pytest,
+            "unittest": _run_unittest,
+            "jest": _run_jest,
+        }
+        if framework in runners:
+            return await runners[framework](path, test_type, coverage)
+        else:
+            return await _run_generic_tests(path, test_type, coverage)
     except Exception as e:
         return {"error": f"Test execution failed: {str(e)}"}
 
 
-async def _detect_test_framework(test_path: Path) -> str:
-    """Detect the test framework being used."""
-
-    # Check for common test framework indicators
-    framework_indicators = {
-        "pytest": ["pytest.ini", "conftest.py", "test_*.py", "*_test.py"],
-        "jest": ["jest.config.js", "package.json"],
-        "mocha": ["mocha.opts", ".mocharc.json"],
-        "unittest": ["test*.py"],
-        "go_test": ["*_test.go"],
-        "cargo_test": ["Cargo.toml"],
-        "maven": ["pom.xml"],
-        "gradle": ["build.gradle"],
-    }
-
-    project_root = test_path if test_path.is_dir() else test_path.parent
-
-    # Look for framework files
-    for framework, indicators in framework_indicators.items():
-        for indicator in indicators:
-            if list(project_root.glob(indicator)) or list(
-                project_root.rglob(indicator)
-            ):
-                return framework
-
-    # Check package.json for test scripts
-    package_json = project_root / "package.json"
-    if package_json.exists():
-        try:
-            with open(package_json) as f:
-                package_data = json.load(f)
-                test_script = package_data.get("scripts", {}).get("test", "")
-                if "jest" in test_script:
-                    return "jest"
-                elif "mocha" in test_script:
-                    return "mocha"
-                else:
-                    return "npm_test"
-        except:
-            pass
-
-    return "unknown"
+async def _detect_test_framework(path: Path) -> str:
+    """Detect the testing framework being used."""
+    if (path / "pytest.ini").exists() or (path / "pyproject.toml").exists():
+        return "pytest"
+    if (path / "jest.config.js").exists() or (path / "package.json").exists():
+        return "jest"
+    test_files = list(path.rglob("test_*.py")) + list(path.rglob("*_test.py"))
+    if test_files:
+        return "unittest"
+    return "generic"
 
 
-async def _execute_tests(
-    framework: str, test_path: Path, test_type: str, coverage: bool
-) -> Dict:
-    """Execute tests based on the detected framework."""
+def _execute_command(cmd: List[str], cwd: str, timeout: int = 300):
+    """Helper to execute a shell command."""
+    return subprocess.run(
+        cmd, capture_output=True, text=True, cwd=cwd, timeout=timeout
+    )
 
-    results = {
-        "framework": framework,
-        "status": "unknown",
-        "summary": {},
-        "details": [],
-        "coverage": {},
-        "recommendations": [],
-    }
 
-    try:
-        if framework == "pytest":
-            results = await _run_pytest(test_path, test_type, coverage)
-        elif framework in ["jest", "npm_test"]:
-            results = await _run_npm_tests(test_path, test_type, coverage)
-        elif framework == "go_test":
-            results = await _run_go_tests(test_path, test_type, coverage)
-        elif framework == "cargo_test":
-            results = await _run_cargo_tests(test_path, test_type, coverage)
-        elif framework == "unittest":
-            results = await _run_python_unittest(test_path, test_type, coverage)
-        else:
-            results = await _run_generic_tests(test_path, test_type)
-
-        # Add recommendations based on results
-        results["recommendations"] = _generate_test_recommendations(results)
-
-    except Exception as e:
-        results["status"] = "error"
-        results["error"] = str(e)
-
+def _append_common_results(results: Dict, cmd: List[str], retcode: int, framework: str) -> Dict:
+    """Append common execution details to the test results."""
+    results["command_executed"] = " ".join(cmd)
+    results["exit_code"] = retcode
+    results["framework"] = framework
     return results
 
 
-async def _run_pytest(test_path: Path, test_type: str, coverage: bool) -> Dict:
-    """Run pytest tests."""
-
+async def _run_pytest(path: Path, test_type: str, coverage: bool) -> Dict:
+    """Run pytest with comprehensive reporting."""
     cmd = ["python", "-m", "pytest"]
-
-    # Add coverage if requested
     if coverage:
-        cmd.extend(["--cov=.", "--cov-report=term-missing"])
-
-    # Add test type filters
-    if test_type == "unit":
-        cmd.extend(["-k", "unit"])
-    elif test_type == "integration":
-        cmd.extend(["-k", "integration"])
-
-    # Add path
-    cmd.append(str(test_path))
-
-    # Add output format
-    cmd.extend(["-v", "--tb=short"])
-
+        cmd.extend(["--cov=.", "--cov-report=json", "--cov-report=term"])
+    if test_type in {"unit", "integration", "e2e"}:
+        cmd.extend(["-k", test_type])
+    cmd.extend(["-v", "--tb=short", str(path)])
     try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=test_path.parent, timeout=300
-        )
-
-        return {
-            "framework": "pytest",
-            "status": "passed" if result.returncode == 0 else "failed",
-            "summary": _parse_pytest_output(result.stdout, result.stderr),
-            "details": result.stdout.split("\n")[-20:],  # Last 20 lines
-            "coverage": _parse_pytest_coverage(result.stdout) if coverage else {},
-            "exit_code": result.returncode,
-        }
-
-    except subprocess.TimeoutExpired:
-        return {
-            "framework": "pytest",
-            "status": "timeout",
-            "error": "Tests timed out after 5 minutes",
-        }
-    except Exception as e:
-        return {"framework": "pytest", "status": "error", "error": str(e)}
-
-
-async def _run_npm_tests(test_path: Path, test_type: str, coverage: bool) -> Dict:
-    """Run npm/jest tests."""
-
-    cmd = ["npm", "test"]
-
-    # Set environment variables for coverage
-    env = {}
-    if coverage:
-        env["CI"] = "true"  # Many test runners enable coverage in CI mode
-
-    try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            cwd=test_path.parent,
-            timeout=300,
-            env={**subprocess.os.environ, **env},
-        )
-
-        return {
-            "framework": "npm/jest",
-            "status": "passed" if result.returncode == 0 else "failed",
-            "summary": _parse_npm_test_output(result.stdout, result.stderr),
-            "details": result.stdout.split("\n")[-15:],
-            "coverage": _parse_jest_coverage(result.stdout) if coverage else {},
-            "exit_code": result.returncode,
-        }
-
-    except subprocess.TimeoutExpired:
-        return {
-            "framework": "npm/jest",
-            "status": "timeout",
-            "error": "Tests timed out after 5 minutes",
-        }
-    except Exception as e:
-        return {"framework": "npm/jest", "status": "error", "error": str(e)}
-
-
-async def _run_go_tests(test_path: Path, test_type: str, coverage: bool) -> Dict:
-    """Run Go tests."""
-
-    cmd = ["go", "test"]
-
-    if coverage:
-        cmd.extend(["-cover", "-coverprofile=coverage.out"])
-
-    cmd.extend(["-v", "./..."])
-
-    try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=test_path.parent, timeout=300
-        )
-
-        return {
-            "framework": "go_test",
-            "status": "passed" if result.returncode == 0 else "failed",
-            "summary": _parse_go_test_output(result.stdout, result.stderr),
-            "details": result.stdout.split("\n")[-15:],
-            "coverage": _parse_go_coverage(result.stdout) if coverage else {},
-            "exit_code": result.returncode,
-        }
-
-    except subprocess.TimeoutExpired:
-        return {
-            "framework": "go_test",
-            "status": "timeout",
-            "error": "Tests timed out after 5 minutes",
-        }
-    except Exception as e:
-        return {"framework": "go_test", "status": "error", "error": str(e)}
-
-
-async def _run_cargo_tests(test_path: Path, test_type: str, coverage: bool) -> Dict:
-    """Run Rust/Cargo tests."""
-
-    cmd = ["cargo", "test"]
-
-    if test_type == "unit":
-        cmd.append("--lib")
-    elif test_type == "integration":
-        cmd.append("--test")
-
-    cmd.append("--verbose")
-
-    try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=test_path.parent, timeout=300
-        )
-
-        return {
-            "framework": "cargo_test",
-            "status": "passed" if result.returncode == 0 else "failed",
-            "summary": _parse_cargo_test_output(result.stdout, result.stderr),
-            "details": result.stdout.split("\n")[-15:],
-            "coverage": {},  # Rust coverage requires additional tools
-            "exit_code": result.returncode,
-        }
-
-    except subprocess.TimeoutExpired:
-        return {
-            "framework": "cargo_test",
-            "status": "timeout",
-            "error": "Tests timed out after 5 minutes",
-        }
-    except Exception as e:
-        return {"framework": "cargo_test", "status": "error", "error": str(e)}
-
-
-async def _run_python_unittest(test_path: Path, test_type: str, coverage: bool) -> Dict:
-    """Run Python unittest tests."""
-
-    cmd = ["python", "-m", "unittest", "discover"]
-
-    if coverage:
-        cmd = ["python", "-m", "coverage", "run", "-m", "unittest", "discover"]
-
-    cmd.extend(["-s", str(test_path), "-v"])
-
-    try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, cwd=test_path.parent, timeout=300
-        )
-
-        coverage_data = {}
+        result = _execute_command(cmd, str(path))
+        test_results = await _parse_pytest_output(result.stdout, result.stderr)
         if coverage:
-            # Run coverage report
-            cov_result = subprocess.run(
-                ["python", "-m", "coverage", "report"],
-                capture_output=True,
-                text=True,
-                cwd=test_path.parent,
-            )
-            coverage_data = _parse_coverage_report(cov_result.stdout)
-
-        return {
-            "framework": "unittest",
-            "status": "passed" if result.returncode == 0 else "failed",
-            "summary": _parse_unittest_output(result.stdout, result.stderr),
-            "details": result.stdout.split("\n")[-15:],
-            "coverage": coverage_data,
-            "exit_code": result.returncode,
-        }
-
+            test_results["coverage"] = await _parse_coverage_report(path)
+        return _append_common_results(test_results, cmd, result.returncode, "pytest")
     except subprocess.TimeoutExpired:
         return {
-            "framework": "unittest",
-            "status": "timeout",
-            "error": "Tests timed out after 5 minutes",
+            "error": "Test execution timed out (5 minutes)",
+            "suggestion": "Tests may be hanging or taking too long",
         }
     except Exception as e:
-        return {"framework": "unittest", "status": "error", "error": str(e)}
+        return {"error": f"Failed to run pytest: {str(e)}"}
 
 
-async def _run_generic_tests(test_path: Path, test_type: str) -> Dict:
-    """Run generic test discovery."""
+async def _run_unittest(path: Path, test_type: str, coverage: bool) -> Dict:
+    """Run Python unittest with reporting."""
+    cmd = ["python", "-m", "unittest", "discover", "-s", str(path), "-v"]
+    try:
+        result = _execute_command(cmd, str(path))
+        test_results = await _parse_unittest_output(result.stdout, result.stderr)
+        return _append_common_results(test_results, cmd, result.returncode, "unittest")
+    except Exception as e:
+        return {"error": f"Failed to run unittest: {str(e)}"}
 
-    # Try to find and count test files
-    test_files = []
-    test_patterns = ["test_*.py", "*_test.py", "*.test.js", "test/*.js", "tests/*.py"]
 
-    for pattern in test_patterns:
-        test_files.extend(test_path.rglob(pattern))
+async def _run_jest(path: Path, test_type: str, coverage: bool) -> Dict:
+    """Run Jest tests for JavaScript/TypeScript."""
+    cmd = ["npm", "run", "test:coverage"] if coverage else ["npm", "test"]
+    try:
+        result = _execute_command(cmd, str(path))
+        test_results = await _parse_jest_output(result.stdout, result.stderr)
+        return _append_common_results(test_results, cmd, result.returncode, "jest")
+    except Exception as e:
+        return {"error": f"Failed to run Jest: {str(e)}"}
 
+
+async def _run_generic_tests(path: Path, test_type: str, coverage: bool) -> Dict:
+    """Run generic test discovery and execution."""
+    patterns = ["test_*.py", "*_test.py", "*.test.js", "*.spec.js"]
+    test_files = [f for pattern in patterns for f in path.rglob(pattern)]
+    if not test_files:
+        return {
+            "error": "No test files found",
+            "searched_patterns": patterns,
+            "suggestion": "Create test files following standard naming conventions",
+        }
     return {
         "framework": "generic",
-        "status": "discovered",
-        "summary": {
-            "test_files_found": len(test_files),
-            "message": "Test files discovered but no specific framework runner executed",
-        },
-        "details": [str(f) for f in test_files[:10]],
-        "coverage": {},
+        "test_files_found": len(test_files),
+        "test_files": [str(f) for f in test_files[:10]],
+        "message": "Test files detected but no specific framework found",
         "recommendations": [
-            "Install a test framework (pytest, jest, etc.)",
-            "Configure test runner in package.json or requirements.txt",
+            "Install pytest for Python testing: pip install pytest",
+            "Install Jest for JavaScript testing: npm install --save-dev jest",
+            "Add test configuration files (pytest.ini, jest.config.js)",
         ],
     }
 
 
-def _parse_pytest_output(stdout: str, stderr: str) -> Dict:
-    """Parse pytest output for summary information."""
-
-    import re
-
-    summary = {"tests_run": 0, "passed": 0, "failed": 0, "skipped": 0}
-
-    # Look for test results summary
-    summary_match = re.search(r"(\d+) passed.*?(\d+) failed.*?(\d+) skipped", stdout)
-    if summary_match:
-        summary["passed"] = int(summary_match.group(1))
-        summary["failed"] = int(summary_match.group(2))
-        summary["skipped"] = int(summary_match.group(3))
-        summary["tests_run"] = (
-            summary["passed"] + summary["failed"] + summary["skipped"]
-        )
-
-    # Simple fallback parsing
-    if summary["tests_run"] == 0:
-        passed_matches = re.findall(r"PASSED", stdout)
-        failed_matches = re.findall(r"FAILED", stdout)
-        summary["passed"] = len(passed_matches)
-        summary["failed"] = len(failed_matches)
-        summary["tests_run"] = summary["passed"] + summary["failed"]
-
-    return summary
-
-
-def _parse_npm_test_output(stdout: str, stderr: str) -> Dict:
-    """Parse npm test output."""
-
-    import re
-
-    summary = {"tests_run": 0, "passed": 0, "failed": 0}
-
-    # Look for Jest-style output
-    test_match = re.search(
-        r"Tests:\s+(\d+) failed,\s+(\d+) passed,\s+(\d+) total", stdout
-    )
-    if test_match:
-        summary["failed"] = int(test_match.group(1))
-        summary["passed"] = int(test_match.group(2))
-        summary["tests_run"] = int(test_match.group(3))
-
-    return summary
-
-
-def _parse_go_test_output(stdout: str, stderr: str) -> Dict:
-    """Parse Go test output."""
-
-    import re
-
-    summary = {"tests_run": 0, "passed": 0, "failed": 0}
-
-    # Count PASS and FAIL
-    passed_matches = re.findall(r"PASS", stdout)
-    failed_matches = re.findall(r"FAIL", stdout)
-
-    summary["passed"] = len(passed_matches)
-    summary["failed"] = len(failed_matches)
-    summary["tests_run"] = summary["passed"] + summary["failed"]
-
-    return summary
-
-
-def _parse_cargo_test_output(stdout: str, stderr: str) -> Dict:
-    """Parse Cargo test output."""
-
-    import re
-
-    summary = {"tests_run": 0, "passed": 0, "failed": 0}
-
-    # Look for test result summary
-    result_match = re.search(r"test result: (\w+)\. (\d+) passed; (\d+) failed", stdout)
-    if result_match:
-        summary["passed"] = int(result_match.group(2))
-        summary["failed"] = int(result_match.group(3))
-        summary["tests_run"] = summary["passed"] + summary["failed"]
-
-    return summary
-
-
-def _parse_unittest_output(stdout: str, stderr: str) -> Dict:
-    """Parse unittest output."""
-
-    import re
-
-    summary = {"tests_run": 0, "passed": 0, "failed": 0, "errors": 0}
-
-    # Look for unittest summary
-    result_match = re.search(r"Ran (\d+) tests", stdout)
-    if result_match:
-        summary["tests_run"] = int(result_match.group(1))
-
-    # Check for failures and errors
-    if "FAILED" in stdout:
-        fail_match = re.search(r"failures=(\d+)", stdout)
-        error_match = re.search(r"errors=(\d+)", stdout)
-
-        summary["failed"] = int(fail_match.group(1)) if fail_match else 0
-        summary["errors"] = int(error_match.group(1)) if error_match else 0
-        summary["passed"] = summary["tests_run"] - summary["failed"] - summary["errors"]
-    else:
-        summary["passed"] = summary["tests_run"]
-
-    return summary
-
-
-def _parse_pytest_coverage(stdout: str) -> Dict:
-    """Parse pytest coverage output."""
-
-    import re
-
-    coverage = {"total_coverage": 0, "files": []}
-
-    # Look for coverage percentage
-    coverage_match = re.search(r"TOTAL.*?(\d+)%", stdout)
-    if coverage_match:
-        coverage["total_coverage"] = int(coverage_match.group(1))
-
-    return coverage
-
-
-def _parse_jest_coverage(stdout: str) -> Dict:
-    """Parse Jest coverage output."""
-
-    import re
-
-    coverage = {"total_coverage": 0}
-
-    # Look for coverage summary
-    coverage_match = re.search(r"All files.*?(\d+\.?\d*)%", stdout)
-    if coverage_match:
-        coverage["total_coverage"] = float(coverage_match.group(1))
-
-    return coverage
-
-
-def _parse_go_coverage(stdout: str) -> Dict:
-    """Parse Go coverage output."""
-
-    import re
-
-    coverage = {"total_coverage": 0}
-
-    # Look for coverage percentage
-    coverage_match = re.search(r"coverage: (\d+\.?\d*)% of statements", stdout)
-    if coverage_match:
-        coverage["total_coverage"] = float(coverage_match.group(1))
-
-    return coverage
-
-
-def _parse_coverage_report(stdout: str) -> Dict:
-    """Parse generic coverage report."""
-
-    import re
-
-    coverage = {"total_coverage": 0}
-
-    # Look for total coverage line
-    coverage_match = re.search(r"TOTAL.*?(\d+)%", stdout)
-    if coverage_match:
-        coverage["total_coverage"] = int(coverage_match.group(1))
-
-    return coverage
-
-
-def _generate_test_recommendations(results: Dict) -> List[str]:
-    """Generate recommendations based on test results."""
-
-    recommendations = []
-
-    status = results.get("status")
-    summary = results.get("summary", {})
-    coverage = results.get("coverage", {})
-
-    # Based on test status
-    if status == "failed":
-        recommendations.append("Fix failing tests before proceeding with deployment")
-        failed_count = summary.get("failed", 0)
-        if failed_count > 0:
-            recommendations.append(f"Address {failed_count} failing test(s)")
-
-    elif status == "passed":
-        recommendations.append("All tests passing - good to proceed")
-
-    elif status == "timeout":
-        recommendations.append("Optimize test performance - tests are taking too long")
-
-    elif status == "discovered":
-        recommendations.append("Set up a proper test runner for automated testing")
-
-    # Based on coverage
-    total_coverage = coverage.get("total_coverage", 0)
-    if total_coverage > 0:
-        if total_coverage < 50:
-            recommendations.append("Increase test coverage - currently below 50%")
-        elif total_coverage < 80:
-            recommendations.append("Consider adding more tests to reach 80% coverage")
-        else:
-            recommendations.append("Excellent test coverage!")
-
-    # Based on test count
-    tests_run = summary.get("tests_run", 0)
-    if tests_run == 0:
-        recommendations.append("No tests found - consider adding unit tests")
-    elif tests_run < 10:
-        recommendations.append("Consider adding more comprehensive test coverage")
-
-    return recommendations
+async def _parse_pytest_output(stdout: str, stderr: str) -> Dict:
+    """Parse pytest output for test results."""
+    results = {
+        "summary": {},
+        "tests": [],
+        "failures": [],
+        "errors": [],
+        "warnings": []
+    }
+    for line in stdout.splitlines():
+        if " PASSED " in line:
+            results["tests"].append({"name": line.split("::")[0], "status": "passed"})
+        elif " FAILED " in line:
+            results["tests"].append({"name": line.split("::")[0], "status": "failed"})
+            results["failures"].append(line)
+        elif " ERROR " in line:
+            results["errors"].append(line)
+        elif "warning" in line.lower():
+            results["warnings"].append(line)
+
+    for line in stdout.splitlines():
+        if "passed" in line and "failed" in line:
+            results["summary"]["raw"] = line
+            break
+        elif line.startswith("=") and "passed" in line:
+            results["summary"]["raw"] = line
+            break
+
+    results["summary"]["total_tests"] = len(results["tests"])
+    results["summary"]["passed"] = sum(1 for t in results["tests"] if t["status"] == "passed")
+    results["summary"]["failed"] = sum(1 for t in results["tests"] if t["status"] == "failed")
+    results["summary"]["errors"] = len(results["errors"])
+    results["summary"]["warnings"] = len(results["warnings"])
+    return results
+
+
+async def _parse_unittest_output(stdout: str, stderr: str) -> Dict:
+    """Parse unittest output for test results."""
+    results = {"summary": {}, "tests": [], "failures": [], "errors": []}
+    for line in stdout.splitlines():
+        if line.startswith("test_"):
+            if " ... ok" in line:
+                results["tests"].append({"name": line.split()[0], "status": "passed"})
+            elif " ... FAIL" in line:
+                results["tests"].append({"name": line.split()[0], "status": "failed"})
+                results["failures"].append(line)
+            elif " ... ERROR" in line:
+                results["errors"].append(line)
+
+    for line in stdout.splitlines():
+        if line.startswith("Ran "):
+            results["summary"]["raw"] = line
+            break
+
+    results["summary"]["total_tests"] = len(results["tests"])
+    results["summary"]["passed"] = sum(1 for t in results["tests"] if t["status"] == "passed")
+    results["summary"]["failed"] = sum(1 for t in results["tests"] if t["status"] == "failed")
+    results["summary"]["errors"] = len(results["errors"])
+    return results
+
+
+async def _parse_jest_output(stdout: str, stderr: str) -> Dict:
+    """Parse Jest output for test results."""
+    results = {"summary": {}, "tests": [], "failures": []}
+    for line in stdout.splitlines():
+        if " PASS " in line:
+            results["tests"].append({"name": line.split()[-1], "status": "passed"})
+        elif " FAIL " in line:
+            results["tests"].append({"name": line.split()[-1], "status": "failed"})
+            results["failures"].append(line)
+
+    results["summary"]["total_tests"] = len(results["tests"])
+    results["summary"]["passed"] = sum(1 for t in results["tests"] if t["status"] == "passed")
+    results["summary"]["failed"] = sum(1 for t in results["tests"] if t["status"] == "failed")
+    return results
+
+
+async def _parse_coverage_report(path: Path) -> Dict:
+    """Parse coverage report if available."""
+    coverage_file = path / "coverage.json"
+    if coverage_file.exists():
+        try:
+            with open(coverage_file, "r") as f:
+                coverage_data = json.load(f)
+            if "totals" in coverage_data:
+                return {
+                    "line_coverage": coverage_data["totals"].get("percent_covered", 0),
+                    "lines_covered": coverage_data["totals"].get("covered_lines", 0),
+                    "lines_total": coverage_data["totals"].get("num_statements", 0),
+                    "files_analyzed": len(coverage_data.get("files", {})),
+                }
+        except Exception:
+            pass
+    return {
+        "message": "Coverage data not available",
+        "suggestion": "Install coverage.py: pip install coverage",
+    }
+
+if __name__ == "__main__":
+    import asyncio
+    result = asyncio.run(run_tests_tool("test_files"))
+    print(result)

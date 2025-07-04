@@ -1,0 +1,12 @@
+2025-06-26 20:34:20,129 - INFO - Added 'src' directory to sys.path
+2025-06-26 20:34:21,202 - INFO - FastMCP server instance created for 'business-intelligence'
+2025-06-26 20:34:21,222 - INFO - Starting Business Intelligence MCP Server
+2025-06-26 20:46:44,482 - INFO - Added 'src' directory to sys.path
+2025-06-26 20:46:45,467 - INFO - FastMCP server instance created for 'business-intelligence1'
+2025-06-26 20:46:45,489 - INFO - Starting Business Intelligence MCP Server
+2025-06-26 20:52:58,490 - INFO - Added 'src' directory to sys.path
+2025-06-26 20:52:59,549 - INFO - FastMCP server instance created for 'business-intelligence'
+2025-06-26 20:52:59,571 - INFO - Starting Business Intelligence MCP Server
+2025-06-26 20:54:08,756 - INFO - Added 'src' directory to sys.path
+2025-06-26 20:54:09,778 - INFO - FastMCP server instance created for 'business-intelligence'
+2025-06-26 20:54:09,798 - INFO - Starting Business Intelligence MCP Server

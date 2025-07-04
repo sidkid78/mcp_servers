@@ -9,6 +9,21 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 import sqlite3
+import requests
+import logging
+from datetime import datetime
+import re
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
+import plotly.subplots as sp
+import plotly.figure_factory as ff
+import plotly.colors as pc
+import plotly.offline as pyo
+import plotly.graph_objs as go
 
 async def load_datasource_tool(source_path: str, source_type: str = "auto", dataset_name: str = "", options: Dict[str, Any] = {}) -> Dict[str, Any]:
     """
@@ -50,7 +65,8 @@ async def load_datasource_tool(source_path: str, source_type: str = "auto", data
             "data_preview": processed_data["preview"],
             "schema": processed_data["schema"],
             "data_quality": processed_data["quality_report"],
-            "recommendations": processed_data["recommendations"]
+            "recommendations": processed_data["recommendations"],
+            "troubleshooting": _generate_troubleshooting_tips(source_path, source_type)
         }
         
     except Exception as e:
@@ -490,7 +506,7 @@ def _assess_data_quality(df: pd.DataFrame) -> Dict[str, Any]:
     
     # Potential data type issues
     for col in df.columns:
-        if df[col].dtype == 'object':
+        if df[col].dtype in ['object', 'string']:
             # Check if it could be numeric
             numeric_values = pd.to_numeric(df[col], errors='coerce').notna().sum()
             if numeric_values > len(df) * 0.8:  # 80% numeric
@@ -514,7 +530,7 @@ def _assess_data_quality(df: pd.DataFrame) -> Dict[str, Any]:
     
     # Check for good column variety
     numeric_cols = len(df.select_dtypes(include=['number']).columns)
-    categorical_cols = len(df.select_dtypes(include=['object']).columns)
+    categorical_cols = len(df.select_dtypes(include=['object', 'string']).columns)
     if numeric_cols > 0 and categorical_cols > 0:
         strengths.append("Good mix of numeric and categorical data")
     
@@ -554,7 +570,7 @@ def _generate_data_preview(df: pd.DataFrame) -> Dict[str, Any]:
             col_summary["min"] = float(df[col].min()) if pd.notna(df[col].min()) else None
             col_summary["max"] = float(df[col].max()) if pd.notna(df[col].max()) else None
             col_summary["mean"] = float(df[col].mean()) if pd.notna(df[col].mean()) else None
-        elif df[col].dtype == 'object':
+        elif df[col].dtype in ['object', 'string']:
             # Most common values
             value_counts = df[col].value_counts().head(3)
             col_summary["top_values"] = value_counts.to_dict()
@@ -590,6 +606,9 @@ def _generate_data_recommendations(df: pd.DataFrame, quality_report: Dict[str, A
     
     if len(df.columns) > 20:
         recommendations.append("📊 Many columns detected - use `profile-dataset` for comprehensive analysis")
+    
+    if len(df.columns) > 50:
+        recommendations.append("📊 Many columns detected - use `profile-dataset` for comprehensive analysis and consider sampling")
     
     # Analysis suggestions
     numeric_cols = len(df.select_dtypes(include=['number']).columns)

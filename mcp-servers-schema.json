@@ -1,0 +1,1556 @@
+{
+  "mcp_servers": {
+    "description": "Model Context Protocol servers available for AI assistant integration",
+    "version": "1.0.0",
+    "servers": {
+      "learning-documentation": {
+        "id": "learning-documentation",
+        "name": "Learning Documentation",
+        "description": "AI-powered tutorial creation, quiz generation, and learning progress tracking",
+        "category": "learning",
+        "status": "active",
+        "connection": {
+          "transport": "stdio",
+          "command": "python",
+          "args": ["server_fastmcp.py"],
+          "cwd": "mcp-servers/learning-documentation"
+        },
+        "capabilities": {
+          "tools": [
+            {
+              "name": "create_tutorial",
+              "description": "Create a comprehensive tutorial on any topic",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "description": "The main topic for the tutorial",
+                    "required": true
+                  },
+                  "learning_style": {
+                    "type": "string",
+                    "enum": ["visual", "hands_on", "theoretical", "mixed"],
+                    "description": "Preferred learning approach",
+                    "default": "hands_on"
+                  },
+                  "difficulty_level": {
+                    "type": "string",
+                    "enum": ["beginner", "intermediate", "advanced"],
+                    "description": "Target difficulty level",
+                    "default": "intermediate"
+                  },
+                  "duration_minutes": {
+                    "type": "integer",
+                    "description": "Estimated completion time in minutes",
+                    "minimum": 15,
+                    "maximum": 180,
+                    "default": 60
+                  },
+                  "include_exercises": {
+                    "type": "boolean",
+                    "description": "Whether to include practice exercises",
+                    "default": true
+                  }
+                },
+                "required": ["topic"]
+              }
+            },
+            {
+              "name": "generate_quiz",
+              "description": "Generate quiz questions for assessment",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "description": "Topic for quiz questions",
+                    "required": true
+                  },
+                  "question_count": {
+                    "type": "integer",
+                    "description": "Number of questions to generate",
+                    "minimum": 5,
+                    "maximum": 50,
+                    "default": 10
+                  },
+                  "difficulty": {
+                    "type": "string",
+                    "enum": ["easy", "medium", "hard"],
+                    "default": "medium"
+                  }
+                },
+                "required": ["topic"]
+              }
+            }
+          ],
+          "prompts": [
+            {
+              "name": "content-generation",
+              "description": "Generate educational content with adaptive difficulty",
+              "arguments": [
+                {
+                  "name": "topic",
+                  "description": "Subject matter to create content for",
+                  "required": true
+                },
+                {
+                  "name": "audience",
+                  "description": "Target audience (e.g., 'beginners', 'professionals')",
+                  "required": true
+                },
+                {
+                  "name": "content_type",
+                  "description": "Type of content (tutorial, guide, reference)",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "smart-dev-env": {
+        "id": "smart-dev-env",
+        "name": "Smart Development Environment",
+        "description": "Senior developer pair programmer for code reviews, architecture, and debugging",
+        "category": "development",
+        "status": "active",
+        "connection": {
+          "transport": "stdio",
+          "command": "python",
+          "args": ["server_fastmcp.py"],
+          "cwd": "mcp-servers/smart-dev-env"
+        },
+        "capabilities": {
+          "tools": [
+            {
+              "name": "analyze_codebase",
+              "description": "Perform comprehensive codebase analysis including complexity, quality, and security metrics",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "Path to analyze (file or directory)",
+                    "required": true
+                  },
+                  "analysis_type": {
+                    "type": "string",
+                    "enum": ["complexity", "quality", "security", "full"],
+                    "description": "Type of analysis to perform",
+                    "default": "full"
+                  }
+                },
+                "required": ["path"]
+              }
+            },
+            {
+              "name": "run_tests",
+              "description": "Execute test suites with detailed reporting",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "test_path": {
+                    "type": "string",
+                    "description": "Path to tests",
+                    "required": true
+                  },
+                  "test_type": {
+                    "type": "string",
+                    "enum": ["unit", "integration", "e2e", "all"],
+                    "description": "Type of tests to run",
+                    "default": "all"
+                  }
+                },
+                "required": ["test_path"]
+              }
+            },
+            {
+              "name": "check_dependencies",
+              "description": "Security and version auditing of dependencies",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "manifest_path": {
+                    "type": "string",
+                    "description": "Path to package.json, requirements.txt, etc.",
+                    "required": true
+                  },
+                  "check_vulnerabilities": {
+                    "type": "boolean",
+                    "description": "Check for security vulnerabilities",
+                    "default": true
+                  },
+                  "check_updates": {
+                    "type": "boolean",
+                    "description": "Check for available updates",
+                    "default": true
+                  }
+                },
+                "required": ["manifest_path"]
+              }
+            },
+            {
+              "name": "generate_docs",
+              "description": "Auto-generate documentation from code",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "source_path": {
+                    "type": "string",
+                    "description": "Path to source code",
+                    "required": true
+                  },
+                  "doc_type": {
+                    "type": "string",
+                    "enum": ["api", "readme", "full"],
+                    "description": "Type of documentation to generate",
+                    "default": "full"
+                  },
+                  "output_path": {
+                    "type": "string",
+                    "description": "Where to save documentation",
+                    "default": "docs"
+                  }
+                },
+                "required": ["source_path"]
+              }
+            },
+            {
+              "name": "deploy_preview",
+              "description": "Deploy to staging environment for testing",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "environment": {
+                    "type": "string",
+                    "enum": ["staging", "preview", "test"],
+                    "description": "Target environment",
+                    "default": "staging"
+                  },
+                  "branch": {
+                    "type": "string",
+                    "description": "Git branch to deploy",
+                    "default": "main"
+                  },
+                  "notify": {
+                    "type": "boolean",
+                    "description": "Send deployment notifications",
+                    "default": true
+                  }
+                }
+              }
+            },
+            {
+              "name": "rollback_changes",
+              "description": "Safe rollback mechanisms for deployments or code changes",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "target": {
+                    "type": "string",
+                    "enum": ["deployment", "commit", "migration"],
+                    "description": "What to rollback",
+                    "required": true
+                  },
+                  "identifier": {
+                    "type": "string",
+                    "description": "Deployment ID, commit hash, or migration version",
+                    "required": true
+                  },
+                  "confirm": {
+                    "type": "boolean",
+                    "description": "Confirm rollback operation",
+                    "default": false
+                  }
+                },
+                "required": ["target", "identifier"]
+              }
+            }
+          ],
+          "prompts": [
+            {
+              "name": "code-review",
+              "description": "Comprehensive code review with suggestions",
+              "arguments": [
+                {
+                  "name": "file_path",
+                  "description": "Path to file or diff to review",
+                  "required": true
+                },
+                {
+                  "name": "focus_areas",
+                  "description": "Specific areas to focus on (performance, security, maintainability)",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "architecture-analysis",
+              "description": "Analyze system architecture and suggest improvements",
+              "arguments": [
+                {
+                  "name": "project_path",
+                  "description": "Root path of the project",
+                  "required": true
+                },
+                {
+                  "name": "architecture_type",
+                  "description": "Type of architecture (microservices, monolith, etc.)",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "debug-investigation",
+              "description": "Systematic debugging approach for complex issues",
+              "arguments": [
+                {
+                  "name": "error_description",
+                  "description": "Description of the error or issue",
+                  "required": true
+                },
+                {
+                  "name": "environment_context",
+                  "description": "Environment where the issue occurs",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "performance-audit",
+              "description": "Performance analysis and optimization recommendations",
+              "arguments": [
+                {
+                  "name": "application_type",
+                  "description": "Type of application (web, mobile, desktop)",
+                  "required": true
+                },
+                {
+                  "name": "performance_metrics",
+                  "description": "Current performance metrics or concerns",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "project-management": {
+        "id": "project-management",
+        "name": "Project Management",
+        "description": "Agentic workflows for project planning, resource optimization, and delivery",
+        "category": "business",
+        "status": "active",
+        "connection": {
+          "transport": "stdio",
+          "command": "python",
+          "args": ["server_fastmcp.py"],  
+          "cwd": "mcp-servers/project-management"
+        },
+        "capabilities": {
+          "tools": [
+            {
+              "name": "create_project",
+              "description": "Initialize a new project with planning framework",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Project name",
+                    "required": true
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Project description and goals",
+                    "required": true
+                  },
+                  "team_size": {
+                    "type": "integer",
+                    "description": "Number of team members",
+                    "minimum": 1,
+                    "maximum": 50
+                  },
+                  "deadline": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Project deadline (YYYY-MM-DD)"
+                  },
+                  "priority": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high", "critical"],
+                    "default": "medium"
+                  }
+                },
+                "required": ["name", "description"]
+              }
+            },
+            {
+              "name": "track_progress",
+              "description": "Monitor and report project progress",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "project_id": {
+                    "type": "string",
+                    "description": "Project identifier",
+                    "required": true
+                  },
+                  "include_metrics": {
+                    "type": "boolean",
+                    "description": "Include detailed progress metrics",
+                    "default": true
+                  }
+                },
+                "required": ["project_id"]
+              }
+            },
+            {
+              "name": "assign_tasks",
+              "description": "Assign tasks to team members with optimal resource allocation",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "project_id": {
+                    "type": "string",
+                    "description": "Project identifier",
+                    "required": true
+                  },
+                  "task_description": {
+                    "type": "string",
+                    "description": "Description of the task",
+                    "required": true
+                  },
+                  "assignee": {
+                    "type": "string",
+                    "description": "Team member to assign task to"
+                  },
+                  "priority": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high", "urgent"],
+                    "default": "medium"
+                  },
+                  "estimated_hours": {
+                    "type": "number",
+                    "description": "Estimated hours to complete"
+                  }
+                },
+                "required": ["project_id", "task_description"]
+              }
+            },
+            {
+              "name": "generate_timeline",
+              "description": "Generate project timeline with milestones",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "project_id": {
+                    "type": "string",
+                    "description": "Project identifier",
+                    "required": true
+                  },
+                  "timeline_type": {
+                    "type": "string",
+                    "enum": ["gantt", "milestone", "sprint"],
+                    "default": "milestone"
+                  }
+                },
+                "required": ["project_id"]
+              }
+            },
+            {
+              "name": "identify_blockers",
+              "description": "Identify and analyze project blockers and dependencies",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "project_id": {
+                    "type": "string",
+                    "description": "Project identifier",
+                    "required": true
+                  },
+                  "include_suggestions": {
+                    "type": "boolean",
+                    "description": "Include suggestions for resolving blockers",
+                    "default": true
+                  }
+                },
+                "required": ["project_id"]
+              }
+            }
+          ],
+          "prompts": [
+            {
+              "name": "project-kickoff",
+              "description": "Generate comprehensive project kickoff plan",
+              "arguments": [
+                {
+                  "name": "project_name",
+                  "description": "Name of the project",
+                  "required": true
+                },
+                {
+                  "name": "stakeholders",
+                  "description": "List of project stakeholders",
+                  "required": true
+                },
+                {
+                  "name": "timeline",
+                  "description": "Project timeline or deadline",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "risk-assessment",
+              "description": "Identify and analyze project risks",
+              "arguments": [
+                {
+                  "name": "project_context",
+                  "description": "Context and details about the project",
+                  "required": true
+                },
+                {
+                  "name": "risk_categories",
+                  "description": "Specific risk areas to focus on",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "milestone-planning",
+              "description": "Create detailed milestone planning with deliverables",
+              "arguments": [
+                {
+                  "name": "project_scope",
+                  "description": "Scope and objectives of the project",
+                  "required": true
+                },
+                {
+                  "name": "timeline_constraints",
+                  "description": "Timeline constraints and deadlines",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "resource-optimization",
+              "description": "Optimize resource allocation and team productivity",
+              "arguments": [
+                {
+                  "name": "team_composition",
+                  "description": "Current team composition and skills",
+                  "required": true
+                },
+                {
+                  "name": "workload_analysis",
+                  "description": "Current workload and capacity analysis",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "infrastructure-automation": {
+        "id": "infrastructure-automation",
+        "name": "Infrastructure Automation",
+        "description": "Comprehensive infrastructure management, monitoring, and automation",
+        "category": "infrastructure",
+        "status": "active",
+        "connection": {
+        "id": "infrastructure-automation",
+        "name": "Infrastructure Automation",
+        "description": "Comprehensive infrastructure management, monitoring, and automation",
+        "category": "infrastructure",
+        "status": "active",
+        "connection": {
+          "transport": "stdio",
+          "command": "python",
+          "args": ["server_fastmcp.py"],
+          "cwd": "mcp-servers/infrastructure-automation"
+        },
+        "capabilities": {
+          "tools": [
+            {
+              "name": "monitor_services",
+              "description": "Monitor infrastructure services and health",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "service_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of services to monitor"
+                  },
+                  "check_type": {
+                    "type": "string",
+                    "enum": ["health", "performance", "logs", "all"],
+                    "default": "health"
+                  }
+                }
+              }
+            },
+            {
+              "name": "deploy_application",
+              "description": "Deploy applications to target environments",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "app_name": {
+                    "type": "string",
+                    "description": "Application name",
+                    "required": true
+                  },
+                  "environment": {
+                    "type": "string",
+                    "enum": ["development", "staging", "production"],
+                    "description": "Target deployment environment",
+                    "required": true
+                  },
+                  "version": {
+                    "type": "string",
+                    "description": "Application version to deploy"
+                  }
+                },
+                "required": ["app_name", "environment"]
+              }
+            },
+            {
+              "name": "scale_resources",
+              "description": "Scale infrastructure resources based on demand",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "resource_type": {
+                    "type": "string",
+                    "enum": ["compute", "storage", "network", "database"],
+                    "description": "Type of resource to scale",
+                    "required": true
+                  },
+                  "scaling_action": {
+                    "type": "string",
+                    "enum": ["scale_up", "scale_down", "auto_scale"],
+                    "description": "Scaling action to perform",
+                    "required": true
+                  },
+                  "target_capacity": {
+                    "type": "number",
+                    "description": "Target capacity or percentage"
+                  }
+                },
+                "required": ["resource_type", "scaling_action"]
+              }
+            },
+            {
+              "name": "backup_data",
+              "description": "Perform data backup operations",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "backup_type": {
+                    "type": "string",
+                    "enum": ["full", "incremental", "differential"],
+                    "description": "Type of backup to perform",
+                    "default": "incremental"
+                  },
+                  "data_sources": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of data sources to backup"
+                  },
+                  "retention_days": {
+                    "type": "integer",
+                    "description": "Number of days to retain backup",
+                    "default": 30
+                  }
+                }
+              }
+            }
+          ],
+          "prompts": [
+            {
+              "name": "infra-health-check",
+              "description": "Comprehensive infrastructure health assessment",
+              "arguments": [
+                {
+                  "name": "infrastructure_scope",
+                  "description": "Scope of infrastructure to check (servers, databases, networks)",
+                  "required": true
+                },
+                {
+                  "name": "severity_threshold",
+                  "description": "Minimum severity level to report",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "incident-response",
+              "description": "Generate incident response plan and actions",
+              "arguments": [
+                {
+                  "name": "incident_description",
+                  "description": "Description of the incident",
+                  "required": true
+                },
+                {
+                  "name": "affected_systems",
+                  "description": "Systems affected by the incident",
+                  "required": true
+                },
+                {
+                  "name": "severity_level",
+                  "description": "Incident severity (low, medium, high, critical)",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "disaster-recovery",
+              "description": "Disaster recovery planning and procedures",
+              "arguments": [
+                {
+                  "name": "disaster_scenario",
+                  "description": "Type of disaster scenario to plan for",
+                  "required": true
+                },
+                {
+                  "name": "critical_systems",
+                  "description": "List of critical systems that must be recovered",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "name": "scaling-analysis",
+              "description": "Analyze scaling requirements and recommendations",
+              "arguments": [
+                {
+                  "name": "current_metrics",
+                  "description": "Current performance and usage metrics",
+                  "required": true
+                },
+                {
+                  "name": "growth_projections",
+                  "description": "Expected growth and usage projections",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "business-intelligence": {
+        "id": "business-intelligence",
+        "name": "Business Intelligence",
+        "description": "Data analysis, visualization, and business insights generation",
+        "category": "business",
+        "status": "maintenance",
+        "connection": {
+          "transport": "stdio",
+          "command": "python",
+          "args": ["server_fastmcp.py"],
+          "cwd": "mcp-servers/business-intelligence"
+        },
+        "capabilities": {
+          "tools": [
+            {
+              "name": "load_business_dataset",
+              "description": "Load and validate business datasets",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "dataset_name": {
+                    "type": "string",
+                    "description": "Name of the dataset to load",
+                    "required": true
+                  },
+                  "file_path": {
+                    "type": "string",
+                    "description": "Path to the dataset file",
+                    "required": true
+                  }
+                },
+                "required": ["dataset_name", "file_path"]
+              }
+            },
+            {
+              "name": "load_datasource",
+              "description": "Load and validate data sources",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "source_path": {
+                    "type": "string",
+                    "description": "Path to the data source file",
+                    "required": true
+                  },
+                  "source_type": {
+                    "type": "string",
+                    "enum": ["csv", "json", "database", "api"],
+                    "description": "Type of data source to load",
+                    "required": true
+                  }
+                },
+                "required": ["source_path", "source_type"]
+              }
+            },
+            {
+              "name": "profile_dataset",
+              "description": "Generate comprehensive dataset profile and statistics",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "dataset_id": {
+                    "type": "string",
+                    "description": "Dataset identifier",
+                    "required": true
+                  }
+                },
+                "required": ["dataset_id"]
+              }
+            },
+            {
+              "name": "analyze_dataset",
+              "description": "Analyze dataset for patterns and relationships",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "dataset_id": {
+                    "type": "string",
+                    "description": "Dataset identifier",
+                    "required": true
+                  },
+                  "analysis_type": {
+                    "type": "string",
+                    "enum": ["descriptive", "predictive", "prescriptive"],
+                    "description": "Type of analysis to perform",
+                    "required": true
+                  }
+                },
+                "required": ["dataset_id", "analysis_type"]
+              }
+            },
+            {
+              "name": "create_dashboard",
+              "description": "Create interactive dashboards for data exploration",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "data_source": {
+                    "type": "string",
+                    "description": "Data source identifier",
+                    "required": true
+                  },
+                  "dashboard_name": {
+                    "type": "string",
+                    "description": "Name of the dashboard to create",
+                    "required": true
+                  }
+                },
+                "required": ["data_source", "dashboard_name"]
+              }
+            },
+            {
+              "name": "create_visualization",
+              "description": "Create data visualizations and charts",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "data_source": {
+                    "type": "string",
+                    "description": "Data source identifier",
+                    "required": true
+                  },
+                  "chart_type": {
+                    "type": "string",
+                    "enum": ["bar", "line", "pie", "scatter", "heatmap", "histogram"],
+                    "description": "Type of visualization to create",
+                    "required": true
+                  },
+                  "x_axis": {
+                    "type": "string",
+                    "description": "X-axis field"
+                  },
+                  "y_axis": {
+                    "type": "string",
+                    "description": "Y-axis field"
+                  },
+                  "grouping": {
+                    "type": "string",
+                    "description": "Field to group data by"
+                  }
+                },
+                "required": ["data_source", "chart_type"]
+              }
+            },  
+            {
+              "name": "run_correlation",
+               "description": "Perform correlation analysis between variables",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "dataset_id": {
+                    "type": "string",
+                    "description": "Dataset identifier",
+                    "required": true
+                  },
+                  "variables": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Variables to analyze correlations for"
+                  },
+                  "correlation_type": {
+                    "type": "string",
+                    "enum": ["pearson", "spearman", "kendall"],
+                    "default": "pearson"
+                  }
+                },
+                "required": ["dataset_id"]
+              }
+            },
+            {
+              "name": "export_report",
+              "description": "Export analysis reports in various formats",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "report_type": {
+                    "type": "string",
+                    "enum": ["summary", "detailed", "executive"],
+                    "description": "Type of report to generate",
+                    "default": "summary"
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": ["pdf", "html", "excel", "json"],
+                    "description": "Output format",
+                    "default": "pdf"
+                  },
+                  "include_visualizations": {
+                    "type": "boolean",
+                    "description": "Include charts and graphs",
+                    "default": true
+                  }
+                }
+              }
+            }
+          ],
+          "prompts": [
+            {
+              "name": "bi-discovery",
+              "description": "Discover insights and patterns in business data",
+              "arguments": [
+                {
+                  "name": "dataset_description",
+                  "description": "Description of the dataset to analyze",
+                  "required": true
+                },
+                {
+                  "name": "business_questions",
+                  "description": "Specific business questions to answer",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "trend-analysis",
+              "description": "Analyze trends and forecast future patterns",
+              "arguments": [
+                {
+                  "name": "time_series_data",
+                  "description": "Time series data to analyze",
+                  "required": true
+                },
+                {
+                  "name": "forecast_horizon",
+                  "description": "How far into the future to forecast",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "correlation-deep-dive",
+              "description": "Deep dive analysis of correlations and relationships",
+              "arguments": [
+                {
+                  "name": "dataset_context",
+                  "description": "Context and description of the dataset",
+                  "required": true
+                },
+                {
+                  "name": "target_variable",
+                  "description": "Primary variable of interest",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "executive-summary",
+              "description": "Generate executive summary of business intelligence findings",
+              "arguments": [
+                {
+                  "name": "analysis_results",
+                  "description": "Results from previous analyses",
+                  "required": true
+                },
+                {
+                  "name": "business_context",
+                  "description": "Business context and objectives",
+                  "required": true
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "project-management": {
+        "id": "project-management",
+        "name": "Project Management",
+        "description": "Agentic workflows for project planning, resource optimization, and delivery",
+        "category": "business",
+        "status": "active",
+        "connection": {
+          "transport": "stdio",
+          "command": "python",
+          "args": ["server_fastmcp.py"],
+          "cwd": "mcp-servers/project-management"
+        },
+        "capabilities": {
+          "tools": [
+            {
+              "name": "create_project",
+              "description": "Initialize a new project with planning framework",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Project name",
+                    "required": true
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Project description and goals",
+                    "required": true
+                  },
+                  "team_size": {
+                    "type": "integer",
+                    "description": "Number of team members",
+                    "minimum": 1,
+                    "maximum": 50
+                  },
+                  "deadline": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Project deadline (YYYY-MM-DD)"
+                  },
+                  "priority": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high", "critical"],
+                    "default": "medium"
+                  }
+                },
+                "required": ["name", "description"]
+              }
+            },
+            {
+              "name": "track_progress",
+              "description": "Monitor and report project progress",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "project_id": {
+                    "type": "string",
+                    "description": "Project identifier",
+                    "required": true
+                  },
+                  "include_metrics": {
+                    "type": "boolean",
+                    "description": "Include detailed progress metrics",
+                    "default": true
+                  }
+                },
+                "required": ["project_id"]
+              }
+            }
+          ],
+          "prompts": [
+            {
+              "name": "project-kickoff",
+              "description": "Generate comprehensive project kickoff plan",
+              "arguments": [
+                {
+                  "name": "project_name",
+                  "description": "Name of the project",
+                  "required": true
+                },
+                {
+                  "name": "stakeholders",
+                  "description": "List of project stakeholders",
+                  "required": true
+                },
+                {
+                  "name": "timeline",
+                  "description": "Project timeline or deadline",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "risk-assessment",
+              "description": "Identify and analyze project risks",
+              "arguments": [
+                {
+                  "name": "project_context",
+                  "description": "Context and details about the project",
+                  "required": true
+                },
+                {
+                  "name": "risk_categories",
+                  "description": "Specific risk areas to focus on",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "infrastructure-automation": {
+        "id": "infrastructure-automation",
+        "name": "Infrastructure Automation",
+        "description": "Comprehensive infrastructure management, monitoring, and automation",
+        "category": "infrastructure",
+        "status": "active",
+        "connection": {
+          "transport": "stdio",
+          "command": "python",
+          "args": ["server_fastmcp.py"],
+          "cwd": "mcp-servers/infrastructure-automation"
+        },
+        "capabilities": {
+          "tools": [
+            {
+              "name": "monitor_services",
+              "description": "Monitor infrastructure services and health",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "service_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of services to monitor"
+                  },
+                  "check_type": {
+                    "type": "string",
+                    "enum": ["health", "performance", "logs", "all"],
+                    "default": "health"
+                  }
+                }
+              }
+            },
+            {
+              "name": "deploy_application",
+              "description": "Deploy applications to target environments",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "app_name": {
+                    "type": "string",
+                    "description": "Application name",
+                    "required": true
+                  },
+                  "environment": {
+                    "type": "string",
+                    "enum": ["development", "staging", "production"],
+                    "description": "Target deployment environment",
+                    "required": true
+                  },
+                  "version": {
+                    "type": "string",
+                    "description": "Application version to deploy"
+                  }
+                },
+                "required": ["app_name", "environment"]
+              }
+            }
+          ],
+          "prompts": [
+            {
+              "name": "infra-health-check",
+              "description": "Comprehensive infrastructure health assessment",
+              "arguments": [
+                {
+                  "name": "infrastructure_scope",
+                  "description": "Scope of infrastructure to check (servers, databases, networks)",
+                  "required": true
+                },
+                {
+                  "name": "severity_threshold",
+                  "description": "Minimum severity level to report",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "incident-response",
+              "description": "Generate incident response plan and actions",
+              "arguments": [
+                {
+                  "name": "incident_description",
+                  "description": "Description of the incident",
+                  "required": true
+                },
+                {
+                  "name": "affected_systems",
+                  "description": "Systems affected by the incident",
+                  "required": true
+                },
+                {
+                  "name": "severity_level",
+                  "description": "Incident severity (low, medium, high, critical)",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "business-intelligence": {
+        "id": "business-intelligence",
+        "name": "Business Intelligence",
+        "description": "Data analysis, visualization, and business insights generation",
+        "category": "business",
+        "status": "maintenance",
+        "connection": {
+          "transport": "stdio",
+          "command": "python",
+          "args": ["server_fastmcp.py"],
+          "cwd": "mcp-servers/business-intelligence"
+        },
+        "capabilities": {
+          "tools": [
+            {
+              "name": "load_datasource",
+              "description": "Load and validate data sources",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "source_path": {
+                    "type": "string",
+                    "description": "Path to data source",
+                    "required": true
+                  },
+                  "source_type": {
+                    "type": "string",
+                    "enum": ["csv", "json", "database", "api"],
+                    "description": "Type of data source",
+                    "required": true
+                  },
+                  "validation_rules": {
+                    "type": "object",
+                    "description": "Data validation rules"
+                  }
+                },
+                "required": ["source_path", "source_type"]
+              }
+            },
+            {
+              "name": "create_visualization",
+              "description": "Create data visualizations and charts",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "data_source": {
+                    "type": "string",
+                    "description": "Data source identifier",
+                    "required": true
+                  },
+                  "chart_type": {
+                    "type": "string",
+                    "enum": ["bar", "line", "pie", "scatter", "heatmap"],
+                    "description": "Type of visualization",
+                    "required": true
+                  },
+                  "x_axis": {
+                    "type": "string",
+                    "description": "X-axis field"
+                  },
+                  "y_axis": {
+                    "type": "string",
+                    "description": "Y-axis field"
+                  }
+                },
+                "required": ["data_source", "chart_type"]
+              }
+            }
+          ],
+          "prompts": [
+            {
+              "name": "bi-discovery",
+              "description": "Discover insights and patterns in business data",
+              "arguments": [
+                {
+                  "name": "dataset_description",
+                  "description": "Description of the dataset to analyze",
+                  "required": true
+                },
+                {
+                  "name": "business_questions",
+                  "description": "Specific business questions to answer",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "name": "trend-analysis",
+              "description": "Analyze trends and forecast future patterns",
+              "arguments": [
+                {
+                  "name": "time_series_data",
+                  "description": "Time series data to analyze",
+                  "required": true
+                },
+                {
+                  "name": "forecast_horizon",
+                  "description": "How far into the future to forecast",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "usage_examples": {
+    "learning_tutorial": {
+      "server": "learning-documentation",
+      "tool": "create_tutorial",
+      "arguments": {
+        "topic": "React Hooks for Beginners",
+        "learning_style": "hands_on",
+        "difficulty_level": "beginner",
+        "duration_minutes": 45,
+        "include_exercises": true
+      }
+    },
+    "code_analysis": {
+      "server": "smart-dev-env",
+      "tool": "analyze_codebase",
+      "arguments": {
+        "path": "./src",
+        "analysis_type": "full"
+      }
+    },
+    "project_creation": {
+      "server": "project-management",
+      "tool": "create_project",
+      "arguments": {
+        "name": "Mobile App Redesign",
+        "description": "Redesign the mobile application with improved UX",
+        "team_size": 6,
+        "deadline": "2024-03-15",
+        "priority": "high"
+      }
+    },
+    "generate_quiz": {
+      "server": "learning-documentation",
+      "tool": "generate_quiz",
+      "arguments": {
+        "topic": "JavaScript Fundamentals",
+        "question_count": 15,
+        "difficulty": "medium"
+      }
+    },
+    "dependency_audit": {
+      "server": "smart-dev-env",
+      "tool": "check_dependencies",
+      "arguments": {
+        "manifest_path": "./package.json",
+        "check_vulnerabilities": true,
+        "check_updates": true
+      }
+    },
+    "task_assignment": {
+      "server": "project-management",
+      "tool": "assign_tasks",
+      "arguments": {
+        "project_id": "proj_123",
+        "task_description": "Implement user authentication system",
+        "assignee": "john.doe@company.com",
+        "priority": "high",
+        "estimated_hours": 16
+      }
+    },
+    "infrastructure_monitoring": {
+      "server": "infrastructure-automation",
+      "tool": "monitor_services",
+      "arguments": {
+        "service_names": ["web-server", "database", "cache"],
+        "check_type": "all"
+      }
+    },
+    "application_deployment": {
+      "server": "infrastructure-automation",
+      "tool": "deploy_application",
+      "arguments": {
+        "app_name": "my-web-app",
+        "environment": "staging",
+        "version": "v2.1.0"
+      }
+    },
+    "data_analysis": {
+      "server": "business-intelligence",
+      "tool": "load_datasource",
+      "arguments": {
+        "source_path": "./data/sales_data.csv",
+        "source_type": "csv",
+        "validation_rules": {
+          "required_columns": ["date", "amount", "customer_id"]
+        }
+      }
+    },
+    "create_chart": {
+      "server": "business-intelligence",
+      "tool": "create_visualization",
+      "arguments": {
+        "data_source": "sales_data_2024",
+        "chart_type": "line",
+        "x_axis": "date",
+        "y_axis": "revenue"
+      }
+    },
+    "content_generation_prompt": {
+      "server": "learning-documentation",
+      "prompt": "content-generation",
+      "arguments": {
+        "topic": "Machine Learning Basics",
+        "audience": "beginners",
+        "content_type": "tutorial"
+      }
+    },
+    "code_review_prompt": {
+      "server": "smart-dev-env",
+      "prompt": "code-review",
+      "arguments": {
+        "file_path": "./src/components/UserAuth.tsx",
+        "focus_areas": "security, performance"
+      }
+    },
+    "project_kickoff_prompt": {
+      "server": "project-management",
+      "prompt": "project-kickoff",
+      "arguments": {
+        "project_name": "E-commerce Platform Migration",
+        "stakeholders": "Product Manager, Tech Lead, UX Designer, QA Lead",
+        "timeline": "6 months"
+      }
+    },
+    "health_check_prompt": {
+      "server": "infrastructure-automation",
+      "prompt": "infra-health-check",
+      "arguments": {
+        "infrastructure_scope": "web servers, databases, load balancers",
+        "severity_threshold": "medium"
+      }
+    },
+    "bi_discovery_prompt": {
+      "server": "business-intelligence",
+      "prompt": "bi-discovery",
+      "arguments": {
+        "dataset_description": "Customer purchase data from e-commerce platform",
+        "business_questions": "What are the top-selling products? Which customer segments are most valuable?"
+      }
+    }
+  },
+  "integration_guide": {
+    "api_endpoint": "/api/mcp/{serverId}",
+    "supported_actions": [
+      "status",
+      "tools", 
+      "prompts",
+      "call-tool",
+      "get-prompt"
+    ],
+    "authentication": "none",
+    "rate_limiting": "none",
+    "error_handling": {
+      "server_not_found": 404,
+      "server_unavailable": 503,
+      "invalid_arguments": 400,
+      "execution_error": 500
+    }
+  },
+  "model_integration": {
+    "description": "Guidelines for AI models to effectively use MCP servers",
+    "workflow_patterns": {
+      "tool_execution": {
+        "steps": [
+          "1. Identify the appropriate server based on task category",
+          "2. Validate required parameters are available",
+          "3. Call tool with properly formatted arguments",
+          "4. Process response and extract relevant information",
+          "5. Provide user-friendly summary of results"
+        ],
+        "example_flow": "User asks for code analysis → Select smart-dev-env server → Call analyze_codebase tool → Present findings"
+      },
+      "prompt_execution": {
+        "steps": [
+          "1. Choose server with relevant domain expertise",
+          "2. Select prompt that matches the request type",
+          "3. Prepare arguments with proper context",
+          "4. Execute prompt and receive structured guidance",
+          "5. Apply guidance to complete user request"
+        ],
+        "example_flow": "User needs project planning → Select project-management server → Use project-kickoff prompt → Generate comprehensive plan"
+      },
+      "multi_server_workflows": {
+        "description": "Complex tasks may require coordinating multiple servers",
+        "example": "Full project setup: learning-documentation (create tutorial) → smart-dev-env (analyze codebase) → project-management (create project) → infrastructure-automation (deploy preview)"
+      }
+    },
+    "server_selection_criteria": {
+      "learning-documentation": ["tutorials", "education", "quizzes", "knowledge assessment", "content creation"],
+      "smart-dev-env": ["code analysis", "testing", "debugging", "architecture", "development tools"],
+      "project-management": ["planning", "task management", "resource allocation", "timeline", "milestones"],
+      "infrastructure-automation": ["deployment", "monitoring", "scaling", "backup", "incident response"],
+      "business-intelligence": ["data analysis", "visualization", "reporting", "insights", "trends"]
+    },
+    "argument_handling": {
+      "required_parameters": "Always validate required parameters are provided before making calls",
+      "optional_parameters": "Use defaults when optional parameters aren't specified",
+      "type_validation": "Ensure argument types match schema (string, integer, boolean, array, object)",
+      "enum_validation": "Validate enum values against allowed options",
+      "error_recovery": "Provide helpful error messages when parameters are invalid"
+    },
+    "response_processing": {
+      "success_handling": "Extract key information and present in user-friendly format",
+      "error_handling": "Parse error messages and suggest corrections or alternatives",
+      "result_interpretation": "Provide context and explanation for technical results",
+      "follow_up_suggestions": "Recommend next steps or related actions"
+    },
+    "best_practices": {
+      "context_awareness": "Consider user's skill level and domain when selecting tools/prompts",
+      "progressive_disclosure": "Start with high-level results, offer details on request",
+      "cross_server_coordination": "Use results from one server to inform calls to others",
+      "user_confirmation": "Ask for confirmation before destructive operations (deployments, rollbacks)",
+      "error_graceful_degradation": "Provide alternative approaches when primary tools fail"
+    }
+  },
+  "schema_metadata": {
+    "version": "1.0.0",
+    "last_updated": "2024-01-15",
+    "maintainer": "MCP Development Team",
+    "changelog": {
+      "1.0.0": "Initial comprehensive schema with all 5 MCP servers"
+    },
+    "validation": {
+      "json_schema_version": "draft-07",
+      "required_fields": ["mcp_servers", "usage_examples", "integration_guide"],
+      "validation_tools": ["jsonschema", "ajv"]
+    }
+  }
+} 

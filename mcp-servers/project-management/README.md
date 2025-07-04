@@ -64,6 +64,7 @@ Break down the project into detailed milestones:
 ```
 
 This will:
+
 - Create detailed milestone breakdown
 - Map dependencies between milestones
 - Analyze critical path
@@ -79,6 +80,7 @@ Optimize team allocation:
 ```
 
 This will:
+
 - Design optimal team structure
 - Create resource allocation plan
 - Analyze capacity utilization
@@ -156,6 +158,7 @@ track-progress "proj_abc12345" true true
 ## Architecture Patterns
 
 ### 1. Discovery Pattern
+
 Every workflow starts with discovery to understand context:
 
 ```python
@@ -170,6 +173,7 @@ recommendations = await _generate_recommendations(analysis)
 ```
 
 ### 2. Guidance Pattern
+
 Each workflow provides clear next steps:
 
 ```python
@@ -183,6 +187,7 @@ Next Steps:
 ```
 
 ### 3. Optimization Pattern
+
 Tools provide multiple optimization strategies:
 
 ```python
@@ -197,11 +202,13 @@ else:
 ## Integration with Other MCP Servers
 
 ### Smart Development Environment
+
 - Use for technical project planning
 - Code quality and architecture decisions
 - Development workflow optimization
 
 ### Business Intelligence  
+
 - Project performance analytics
 - Resource utilization insights
 - ROI and budget analysis

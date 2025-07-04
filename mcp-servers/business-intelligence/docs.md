@@ -1,121 +1,79 @@
-# Business Intelligence MCP Server Documentation
+# 🎉 Complete BI MCP Server Implementation
 
-## Core Architecture
+## 📋 Core Architecture
 
-- **Server Type**: Full MCP server implementation
-- **Components**:
-  - 6 agentic workflows (prompts)
-  - 6 individual analysis tools
-- **Key Design Principles**:
-  - Modular separation between prompts (workflows) and tools
-  - Business context integration at all levels
-  - Multi-tool orchestration for comprehensive analysis
+- **Server:** Full MCP server with 6 agentic workflows and 6 individual tools.
+- **Guided Workflows:** Each prompt orchestrates multiple tools for comprehensive analysis.
+- **Business Context:** Rich business interpretations and actionable insights.
+- **Modular Design:** Clean separation between prompts (workflows) and tools (individual actions).
 
-## Workflow Prompts
+## 🔍 Agentic Workflows (Core Prompts)
 
-### /bi-discovery
+- **/bi-discovery:** Data source discovery and initial profiling.
+- **/bi/insight-investigation:** Guided exploration of business metrics.
+- **/bi/correlation-deep-dive:** Multi-dimensional correlation analysis.
+- **/bi/trend-analysis:** Time-series pattern detection with forecasting.
+- **/bi/executive-summary:** Auto-generate C-suite ready reports.
+- **/bi/action-recommendations:** Data-driven business recommendations.
 
-**Data Source Discovery**  
-Initial data profiling with business context analysis
+## 🛠️ Individual Tools
 
-### /bi/insight-investigation
+- **load-datasource:** ETL from CSV, Excel, JSON, databases, and APIs.
+- **profile-dataset:** Statistical profiling and data quality assessment.
+- **create-visualization:** Generate charts, dashboards, and interactive visualizations.
+- **run-correlation:** Perform statistical correlation analysis.
+- **export-report:** Produce PDF, PowerPoint, HTML, or Markdown reports.
+- **schedule-analysis:** Automate recurring insights and monitoring.
 
-**Business Metric Exploration**  
-Guided investigation of key performance indicators
+## 🔄 Guided Experience Flow
 
-### /bi/correlation-deep-dive
+    /bi-discovery → discovers data and suggests next workflows  
+    ↓  
+    /bi/insight-investigation → deep business analysis  
+    ↓  
+    /bi/correlation-deep-dive → statistical relationships  
+    ↓  
+    /bi/trend-analysis → forecasting and patterns  
+    ↓  
+    /bi/executive-summary → C-suite presentation  
+    ↓  
+    /bi/action-recommendations → specific business actions
 
-**Multi-Dimensional Analysis**  
-Statistical relationship mapping across datasets
+## 🚀 Key Features
 
-### /bi/trend-analysis
+- **Smart Discovery:** Auto-detects data types, business context, and analysis opportunities.
+- **Business Intelligence:** Translates statistical insights into business language.
+- **Multi-Format Export:** Supports PDF, PowerPoint, HTML, and Markdown.
+- **Forecasting:** Utilizes time-series analysis with confidence intervals.
+- **Executive Focus:** Tailored summaries for CEOs, CFOs, COOs, and Boards.
+- **Action-Oriented:** Provides prioritized recommendations based on insights.
+- **Automated Scheduling:** Enables recurring analysis and progress monitoring.
 
-**Temporal Patterns**  
-Time-series analysis with forecasting capabilities
+## 📊 Sample Data Included
 
-### /bi/executive-summary
+- sample_customers.csv
+- sample_sales.csv
+- sample_sales.xlsx
 
-**Leadership Reporting**  
-Auto-generated C-suite ready presentations
+## 🎯 Quick Start
 
-### /bi/action-recommendations
+**Start the Server:**
 
-**Operational Planning**  
-Data-driven business action suggestions
+    cd business-intelligence
+    python server.py
 
-## Analysis Tools
+**Begin Analysis:**  
 
-| Tool Name               | Capabilities                              |
-|-------------------------|-------------------------------------------|
-| `load-datasource`       | ETL for CSV, Excel, JSON, DBs, APIs       |
-| `profile-dataset`       | Statistical profiling & quality assessment|
-| `create-visualization`  | Interactive charts & dashboards           |
-| `run-correlation`       | Statistical relationship analysis         |
-| `export-report`         | Multi-format output (PDF, PPT, HTML, MD)  |
-| `schedule-analysis`     | Automated recurring insights generation   |
+Navigate to `/bi-discovery` and follow the guided workflows based on recommendations.
 
-## Workflow Orchestration
+## 💡 Business Value
 
-1. **Initiation**  
-   `/bi-discovery` → Data discovery & workflow suggestions
-2. **Analysis Phase**  
-   - → `/bi/insight-investigation` (Business metrics)  
-   - → `/bi/correlation-deep-dive` (Statistical relationships)  
-   - → `/bi/trend-analysis` (Forecasting)
-3. **Output Generation**  
-   - → `/bi/executive-summary` (Leadership reports)  
-   - → `/bi/action-recommendations` (Operational plans)
+This BI MCP Server transforms raw data into actionable business intelligence by:
 
-## Key Features
+- **Guided Discovery:** Automatically identifies patterns and opportunities.
+- **Statistical Rigor:** Offers professional-grade analysis with confidence intervals.
+- **Business Translation:** Converts technical insights into strategic language.
+- **Executive Communication:** Produces executive-ready summaries for leadership.
+- **Action Planning:** Generates specific, prioritized recommendations with clear timelines.
 
-### Analysis Capabilities
-
-- Smart data type detection
-- Automated pattern recognition
-- Professional-grade statistical analysis
-- Time-series forecasting with confidence intervals
-
-### Business Communication
-
-- Executive-level summarization
-- Audience-specific adaptations:
-  - CEO: Strategic overviews
-  - CFO: Financial impacts
-  - COO: Operational efficiencies
-  - Board: Risk/opportunity analysis
-
-### Technical Capabilities
-
-- Multi-format report generation:
-  - PDF, PowerPoint, HTML, Markdown
-- Automated scheduling system
-- API-based data integration
-
-## Sample Datasets
-
-```plaintext
-sample_customers.csv
-sample_sales.csv
-sample_sales.xlsx
-```
-
-## Quick Start Guide
-
-```bash
-# Start server
-cd business-intelligence
-python server.py
-
-# Initiate analysis
-/bi-discovery
-```
-
-## Architectural Compliance
-
-Implements core patterns:
-
-- Context Priming Pattern
-- Composition Pattern 
-- Guidance Pattern
-
-**Production Status**: Ready for deployment 🚀
+The server adheres to the architectural blueprint by implementing the "Context Priming Pattern," "Composition Pattern," and "Guidance Pattern" across all workflows.

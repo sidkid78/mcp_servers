@@ -1,6 +1,8 @@
 """
-Action Recommendations Prompt
-Data-driven business recommendations with impact analysis.
+Module: Action Recommendations Prompt
+This module provides functionality to generate data‐driven business recommendations 
+and accompanying implementation roadmaps, resource analyses, and risk assessments 
+from provided business insights, goals, and constraints.
 """
 
 from typing import Dict, List, Any
@@ -10,8 +12,21 @@ from datetime import datetime
 
 async def action_recommendations_prompt(insights: str = "", business_goals: str = "", constraints: str = "") -> str:
     """
-    Generate data-driven business recommendations with implementation roadmaps.
-    Converts business intelligence insights into specific, actionable strategies.
+    Generate a comprehensive action recommendations report.
+
+    This asynchronous function converts business intelligence insights into specific,
+    actionable strategies. It builds a recommendation analysis plan, prioritizes the recommendations,
+    creates an implementation roadmap, and performs resource and risk analyses. The final report includes
+    an executive summary, categorized recommendations, and supporting analysis tools.
+
+    Parameters:
+        insights (str): Key business intelligence insights (required).
+        business_goals (str): Current business objectives and targets.
+        constraints (str): Known limitations such as budget, resources, or timeline.
+
+    Returns:
+        str: A complete action plan report formatted with recommendations, timelines, risk assessments,
+             and next steps.
     """
     
     if not insights:
@@ -19,7 +34,7 @@ async def action_recommendations_prompt(insights: str = "", business_goals: str 
 ❌ **Business Insights Required**
 
 Please provide business insights to generate actionable recommendations.
-
+    
 **Usage:** `/bi/action-recommendations insights`
 
 **Parameters:**
@@ -120,7 +135,21 @@ Ready for implementation with clear priorities, timelines, and success metrics.
 
 
 async def _create_recommendation_plan(insights: str, business_goals: str, constraints: str) -> Dict[str, Any]:
-    """Create comprehensive recommendation analysis plan."""
+    """
+    Create a comprehensive recommendation analysis plan.
+
+    This function compiles the provided business insights, goals, and constraints into a structured plan.
+    It also extracts additional context and alignment information to guide the recommendation generation process.
+
+    Parameters:
+        insights (str): Business intelligence insights.
+        business_goals (str): Current business objectives.
+        constraints (str): Business constraints regarding budget, timeline, or resources.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the analysis context, goal alignment, constraint analysis, 
+                        and recommendation framework.
+    """
     
     plan = {
         "insights": insights,
@@ -140,7 +169,18 @@ async def _create_recommendation_plan(insights: str, business_goals: str, constr
 
 
 async def _extract_analysis_context(insights: str) -> Dict[str, Any]:
-    """Extract business context from insights."""
+    """
+    Extract the business context from the provided insights.
+
+    Analyzes the insights to determine the domain (e.g., financial, customer, operations) and extracts relevant metrics,
+    performance indicators, and opportunity areas.
+
+    Parameters:
+        insights (str): Business intelligence insights.
+
+    Returns:
+        Dict[str, Any]: A dictionary with domain, key metrics, performance indicators, and opportunity areas.
+    """
     
     context = {
         "domain": "general",
@@ -182,7 +222,18 @@ async def _extract_analysis_context(insights: str) -> Dict[str, Any]:
 
 
 async def _parse_business_goals(business_goals: str) -> Dict[str, Any]:
-    """Parse and categorize business goals."""
+    """
+    Parse and categorize the business goals provided.
+
+    This function analyzes the goals text to identify primary goal categories, extract specific numerical targets,
+    and determine timeline details.
+
+    Parameters:
+        business_goals (str): The business objectives and goals text.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing primary goals, specific targets, and timeline information.
+    """
     
     if not business_goals:
         return {"primary_goals": ["general_optimization"], "specific_targets": [], "timeline": "unspecified"}
@@ -210,7 +261,17 @@ async def _parse_business_goals(business_goals: str) -> Dict[str, Any]:
 
 
 def _extract_specific_targets(goals_text: str) -> List[str]:
-    """Extract specific numerical targets from goals."""
+    """
+    Extract specific numerical targets from the goals text.
+
+    Uses regular expressions to identify common numerical targets such as percentage growth or monetary values.
+
+    Parameters:
+        goals_text (str): The text containing business goals.
+
+    Returns:
+        List[str]: A list of extracted numerical targets, limited to the top five.
+    """
     
     import re
     
@@ -231,7 +292,17 @@ def _extract_specific_targets(goals_text: str) -> List[str]:
 
 
 def _extract_timeline(goals_text: str) -> str:
-    """Extract timeline from goals text."""
+    """
+    Determine the timeline based on the goals text.
+
+    Analyzes the text for time-related keywords and categorizes the timeline as quarterly, annual, immediate, or medium term.
+
+    Parameters:
+        goals_text (str): The business goals text.
+
+    Returns:
+        str: The determined timeline categorization.
+    """
     
     goals_lower = goals_text.lower()
     
@@ -246,7 +317,17 @@ def _extract_timeline(goals_text: str) -> str:
 
 
 async def _parse_constraints(constraints: str) -> Dict[str, Any]:
-    """Parse and categorize business constraints."""
+    """
+    Parse and categorize business constraints.
+
+    Analyzes the constraints text to determine limitations regarding budget, timeline, resources, and any additional factors.
+
+    Parameters:
+        constraints (str): The text describing business constraints.
+
+    Returns:
+        Dict[str, Any]: A dictionary with budget, timeline, resource constraints, and other identified limitations.
+    """
     
     if not constraints:
         return {"budget": "standard", "timeline": "flexible", "resources": "standard", "other": []}
@@ -288,7 +369,20 @@ async def _parse_constraints(constraints: str) -> Dict[str, Any]:
 
 
 async def _generate_prioritized_recommendations(plan: Dict[str, Any]) -> Dict[str, Any]:
-    """Generate prioritized recommendations based on plan."""
+    """
+    Generate prioritized recommendations based on the analysis plan.
+
+    This function creates a prioritized list of recommendations by generating an executive summary,
+    constructing a priority matrix, and categorizing the specific recommendations into high impact, quick wins,
+    strategic initiatives, and long-term investments. It also computes success metrics and immediate actions.
+
+    Parameters:
+        plan (Dict[str, Any]): The compiled recommendation analysis plan.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the executive summary, priority matrix, categorized recommendations,
+                        success metrics, and immediate next steps.
+    """
     
     recommendations = {
         "executive_summary": "",
@@ -326,7 +420,18 @@ async def _generate_prioritized_recommendations(plan: Dict[str, Any]) -> Dict[st
 
 
 async def _generate_executive_summary(plan: Dict[str, Any]) -> str:
-    """Generate executive summary of recommendations."""
+    """
+    Generate an executive summary of the generated recommendations.
+
+    Constructs a summary based on the identified domain, primary business goals, and analysis insights.
+    Tailors the content to the domain (financial, customer, operations, or general).
+
+    Parameters:
+        plan (Dict[str, Any]): The recommendation analysis plan.
+
+    Returns:
+        str: The executive summary text.
+    """
     
     insights = plan["insights"]
     analysis_context = plan["analysis_context"]
@@ -358,7 +463,17 @@ async def _generate_executive_summary(plan: Dict[str, Any]) -> str:
 
 
 async def _create_priority_matrix(plan: Dict[str, Any]) -> Dict[str, Any]:
-    """Create impact vs effort priority matrix."""
+    """
+    Create a priority matrix based on the recommendation analysis plan.
+
+    Adjusts the impact-versus-effort matrix using identified constraints to determine a priority focus.
+
+    Parameters:
+        plan (Dict[str, Any]): The recommendation analysis plan.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the framework description, priority focus, and scoring guidelines.
+    """
     
     constraint_analysis = plan["constraint_analysis"]
     
@@ -383,7 +498,18 @@ async def _create_priority_matrix(plan: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def _generate_specific_recommendations(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Generate specific recommendations based on context."""
+    """
+    Generate and prioritize specific recommendations based on the analysis context.
+
+    Depending on the identified domain, this function generates domain-specific recommendations.
+    It also adds cross-cutting analytics recommendations and computes priority scores along with risk adjustments.
+
+    Parameters:
+        plan (Dict[str, Any]): The recommendation analysis plan.
+
+    Returns:
+        List[Dict[str, Any]]: A list of recommendation dictionaries, sorted by risk-adjusted priority score.
+    """
     
     insights = plan["insights"]
     analysis_context = plan["analysis_context"]
@@ -403,22 +529,30 @@ async def _generate_specific_recommendations(plan: Dict[str, Any]) -> List[Dict[
     else:
         recommendations.extend(await _generate_general_recommendations(plan))
     
-    # Add cross-cutting recommendations
+    # Add cross-cutting analytics recommendations
     recommendations.extend(await _generate_analytics_recommendations(plan))
     
-    # Score and prioritize
+    # Score and prioritize each recommendation
     for rec in recommendations:
         rec["priority_score"] = (rec["impact_score"] * 2 + (10 - rec["effort_score"])) / 3
         rec["risk_adjusted_score"] = rec["priority_score"] * (1 - rec.get("risk_level", 0.2))
     
-    # Sort by priority score
+    # Sort recommendations by risk-adjusted score (highest first)
     recommendations.sort(key=lambda x: x["risk_adjusted_score"], reverse=True)
     
     return recommendations
 
 
 async def _generate_financial_recommendations(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Generate financial domain recommendations."""
+    """
+    Generate domain-specific recommendations for financial insights.
+
+    Parameters:
+        plan (Dict[str, Any]): The recommendation analysis plan.
+
+    Returns:
+        List[Dict[str, Any]]: A list of financial recommendations.
+    """
     
     return [
         {
@@ -469,7 +603,15 @@ async def _generate_financial_recommendations(plan: Dict[str, Any]) -> List[Dict
 
 
 async def _generate_customer_recommendations(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Generate customer domain recommendations."""
+    """
+    Generate domain-specific recommendations for customer insights.
+
+    Parameters:
+        plan (Dict[str, Any]): The recommendation analysis plan.
+
+    Returns:
+        List[Dict[str, Any]]: A list of customer-focused recommendations.
+    """
     
     return [
         {
@@ -520,7 +662,15 @@ async def _generate_customer_recommendations(plan: Dict[str, Any]) -> List[Dict[
 
 
 async def _generate_operations_recommendations(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Generate operations domain recommendations."""
+    """
+    Generate domain-specific recommendations for operational improvements.
+
+    Parameters:
+        plan (Dict[str, Any]): The recommendation analysis plan.
+
+    Returns:
+        List[Dict[str, Any]]: A list of operations-focused recommendations.
+    """
     
     return [
         {
@@ -571,7 +721,15 @@ async def _generate_operations_recommendations(plan: Dict[str, Any]) -> List[Dic
 
 
 async def _generate_general_recommendations(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Generate general business recommendations."""
+    """
+    Generate general business recommendations when no specific domain is identified.
+
+    Parameters:
+        plan (Dict[str, Any]): The recommendation analysis plan.
+
+    Returns:
+        List[Dict[str, Any]]: A list of general recommendations applicable across various business areas.
+    """
     
     return [
         {
@@ -611,7 +769,15 @@ async def _generate_general_recommendations(plan: Dict[str, Any]) -> List[Dict[s
 
 
 async def _generate_analytics_recommendations(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Generate analytics and BI recommendations."""
+    """
+    Generate analytics and BI recommendations that span across domains.
+
+    Parameters:
+        plan (Dict[str, Any]): The recommendation analysis plan.
+
+    Returns:
+        List[Dict[str, Any]]: A list of analytics-focused recommendations.
+    """
     
     return [
         {
@@ -651,7 +817,18 @@ async def _generate_analytics_recommendations(plan: Dict[str, Any]) -> List[Dict
 
 
 async def _generate_success_metrics(plan: Dict[str, Any], recommendations: List[Dict[str, Any]]) -> List[str]:
-    """Generate success metrics for tracking progress."""
+    """
+    Generate success metrics to measure the progress of implemented recommendations.
+
+    Compiles a base list of metrics along with domain-specific metrics based on the analysis context.
+
+    Parameters:
+        plan (Dict[str, Any]): The recommendation analysis plan.
+        recommendations (List[Dict[str, Any]]): The list of generated recommendations.
+
+    Returns:
+        List[str]: A list of success metrics.
+    """
     
     domain = plan["analysis_context"]["domain"]
     
@@ -694,7 +871,18 @@ async def _generate_success_metrics(plan: Dict[str, Any], recommendations: List[
 
 
 async def _generate_immediate_actions(plan: Dict[str, Any], recommendations: List[Dict[str, Any]]) -> List[str]:
-    """Generate immediate next steps."""
+    """
+    Generate immediate next steps for implementation based on constraints and recommendations.
+
+    Prioritizes actionable next steps for execution within 48 hours and includes constraint-specific actions.
+
+    Parameters:
+        plan (Dict[str, Any]): The recommendation analysis plan.
+        recommendations (List[Dict[str, Any]]): The list of generated recommendations.
+
+    Returns:
+        List[str]: A list of immediate next step actions (up to five items).
+    """
     
     constraint_analysis = plan["constraint_analysis"]
     
@@ -719,7 +907,18 @@ async def _generate_immediate_actions(plan: Dict[str, Any], recommendations: Lis
 
 
 async def _create_implementation_roadmap(recommendations: Dict[str, Any]) -> Dict[str, Any]:
-    """Create detailed implementation roadmap."""
+    """
+    Create a detailed implementation roadmap based on the prioritized recommendations.
+
+    Divides the implementation plan into three phases: immediate (0-30 days), strategic (1-6 months),
+    and transformational (6-18 months). Each phase includes key initiatives and success criteria.
+
+    Parameters:
+        recommendations (Dict[str, Any]): The dictionary of categorized recommendations.
+
+    Returns:
+        Dict[str, Any]: A dictionary outlining the implementation phases and key initiatives for each phase.
+    """
     
     roadmap = {
         "phase_1_immediate": {
@@ -755,7 +954,19 @@ async def _create_implementation_roadmap(recommendations: Dict[str, Any]) -> Dic
 
 
 async def _analyze_resource_requirements(recommendations: Dict[str, Any]) -> Dict[str, Any]:
-    """Analyze resource requirements across recommendations."""
+    """
+    Analyze resource requirements across all generated recommendations.
+
+    Aggregates the required team capabilities and technology investments, and provides an estimated budget range
+    as well as optimization opportunities.
+
+    Parameters:
+        recommendations (Dict[str, Any]): The dictionary containing categorized recommendations.
+
+    Returns:
+        Dict[str, Any]: A dictionary detailing budget estimates, team requirements, technology investments,
+                        and recommendations for resource optimization.
+    """
     
     all_recommendations = (
         recommendations.get("high_impact", []) +
@@ -792,7 +1003,18 @@ async def _analyze_resource_requirements(recommendations: Dict[str, Any]) -> Dic
 
 
 async def _assess_implementation_risks(recommendations: Dict[str, Any]) -> Dict[str, Any]:
-    """Assess implementation risks across recommendations."""
+    """
+    Assess potential risks in the implementation of the recommendations.
+
+    Evaluates common risk factors and provides recommended mitigation strategies along with an overall risk level.
+
+    Parameters:
+        recommendations (Dict[str, Any]): The dictionary containing categorized recommendations.
+
+    Returns:
+        Dict[str, Any]: A dictionary with identified risk factors, mitigation strategies, overall risk level,
+                        and key success factors.
+    """
     
     risk_factors = [
         "Resource availability constraints may delay implementation",
@@ -824,7 +1046,18 @@ async def _assess_implementation_risks(recommendations: Dict[str, Any]) -> Dict[
 
 
 def _format_priority_matrix(priority_matrix: Dict[str, Any]) -> str:
-    """Format priority matrix for display."""
+    """
+    Format the priority matrix into a human-readable string.
+
+    Constructs a visual representation of the impact versus effort analysis framework, including the current priority focus
+    and scoring guidelines.
+
+    Parameters:
+        priority_matrix (Dict[str, Any]): The priority matrix dictionary.
+
+    Returns:
+        str: A formatted string representing the priority analysis.
+    """
     
     framework = priority_matrix.get("framework", "Impact vs Effort analysis")
     priority_focus = priority_matrix.get("priority_focus", "balanced_approach")
@@ -854,7 +1087,18 @@ def _format_priority_matrix(priority_matrix: Dict[str, Any]) -> str:
 
 
 def _format_high_impact_recommendations(high_impact: List[Dict[str, Any]]) -> str:
-    """Format high-impact recommendations."""
+    """
+    Format high-impact recommendations into a bullet list string.
+
+    Iterates over the top high-impact recommendations and formats each recommendation with its title, description,
+    expected impact, timeline, and category.
+
+    Parameters:
+        high_impact (List[Dict[str, Any]]): List of high-impact recommendation dictionaries.
+
+    Returns:
+        str: A formatted string listing the high-impact recommendations.
+    """
     
     formatted = ""
     for i, rec in enumerate(high_impact[:4], 1):
@@ -877,7 +1121,17 @@ def _format_high_impact_recommendations(high_impact: List[Dict[str, Any]]) -> st
 
 
 def _format_quick_wins(quick_wins: List[Dict[str, Any]]) -> str:
-    """Format quick wins section."""
+    """
+    Format quick wins recommendations into a concise list.
+
+    Presents quick win recommendations with their title, brief description, and expected outcomes.
+
+    Parameters:
+        quick_wins (List[Dict[str, Any]]): List of quick win recommendation dictionaries.
+
+    Returns:
+        str: A formatted string listing quick win recommendations.
+    """
     
     if not quick_wins:
         return "No immediate quick wins identified - focus on strategic initiatives."
@@ -894,7 +1148,17 @@ def _format_quick_wins(quick_wins: List[Dict[str, Any]]) -> str:
 
 
 def _format_strategic_initiatives(strategic: List[Dict[str, Any]]) -> str:
-    """Format strategic initiatives section."""
+    """
+    Format strategic initiatives recommendations into a structured list.
+
+    Formats medium-term strategic initiatives with title, timeline, description, and key resource requirements.
+
+    Parameters:
+        strategic (List[Dict[str, Any]]): List of strategic initiative recommendation dictionaries.
+
+    Returns:
+        str: A formatted string listing strategic initiatives.
+    """
     
     formatted = ""
     for init in strategic[:4]:
@@ -914,7 +1178,17 @@ def _format_strategic_initiatives(strategic: List[Dict[str, Any]]) -> str:
 
 
 def _format_long_term_investments(long_term: List[Dict[str, Any]]) -> str:
-    """Format long-term investments section."""
+    """
+    Format long-term investments recommendations into a brief list.
+
+    Formats recommendations that require extended implementation with transformational changes.
+
+    Parameters:
+        long_term (List[Dict[str, Any]]): List of long-term investment recommendation dictionaries.
+
+    Returns:
+        str: A formatted string listing long-term investments.
+    """
     
     formatted = ""
     for lt in long_term[:3]:
@@ -928,7 +1202,17 @@ def _format_long_term_investments(long_term: List[Dict[str, Any]]) -> str:
 
 
 def _format_implementation_roadmap(roadmap: Dict[str, Any]) -> str:
-    """Format implementation roadmap."""
+    """
+    Format the implementation roadmap into a human-readable string.
+
+    Iterates through each phase in the roadmap and formats the phase title, timeline, focus, and key initiatives.
+
+    Parameters:
+        roadmap (Dict[str, Any]): The roadmap dictionary outlining the implementation phases.
+
+    Returns:
+        str: A formatted string representing the complete implementation roadmap.
+    """
     
     formatted = ""
     
@@ -949,7 +1233,17 @@ def _format_implementation_roadmap(roadmap: Dict[str, Any]) -> str:
 
 
 def _format_resource_requirements(resource_analysis: Dict[str, Any]) -> str:
-    """Format resource requirements."""
+    """
+    Format the resource requirements analysis into a structured report.
+
+    Includes budget estimates, team requirements, technology investments, and capacity considerations.
+
+    Parameters:
+        resource_analysis (Dict[str, Any]): The resource analysis results.
+
+    Returns:
+        str: A formatted string presenting resource requirements.
+    """
     
     budget = resource_analysis.get("total_budget_estimate", "TBD")
     team_reqs = resource_analysis.get("team_requirements", [])
@@ -974,33 +1268,81 @@ def _format_resource_requirements(resource_analysis: Dict[str, Any]) -> str:
 
 
 def _format_risk_mitigation(risk_factors: List[str]) -> str:
-    """Format risk mitigation section."""
+    """
+    Format risk mitigation details into a concise checklist.
+
+    Parameters:
+        risk_factors (List[str]): List of risk factor strings.
+
+    Returns:
+        str: A formatted string listing risk factors with warning symbols.
+    """
     
     return '\n'.join(f"⚠️ {risk}" for risk in risk_factors[:5])
 
 
 def _format_success_metrics(success_metrics: List[str]) -> str:
-    """Format success metrics section."""
+    """
+    Format success metrics into a displayable list.
+
+    Parameters:
+        success_metrics (List[str]): List of success metric strings.
+
+    Returns:
+        str: A formatted string of success metrics.
+    """
     
     return '\n'.join(f"📊 {metric}" for metric in success_metrics[:8])
 
 
 def _format_immediate_next_steps(immediate_actions: List[str]) -> str:
-    """Format immediate next steps."""
+    """
+    Format immediate next steps into a bullet list.
+
+    Parameters:
+        immediate_actions (List[str]): List of immediate action strings.
+
+    Returns:
+        str: A formatted string listing immediate next steps.
+    """
     
     return '\n'.join(f"• {action}" for action in immediate_actions[:5])
 
 
 def _format_recommendations_list(recommendations: list) -> str:
-    """Format recommendations as bullet list."""
+    """
+    Format a list of recommendations into a bullet list.
+
+    Parameters:
+        recommendations (list): List of recommendation strings.
+
+    Returns:
+        str: A bullet list formatted string.
+    """
     return '\n'.join(f"• {rec}" for rec in recommendations)
 
 
 def _format_requirements_list(requirements: list) -> str:
-    """Format requirements as bullet list."""
+    """
+    Format a list of requirements into a bullet list.
+
+    Parameters:
+        requirements (list): List of requirement strings.
+
+    Returns:
+        str: A bullet list formatted string.
+    """
     return '\n'.join(f"• {req}" for req in requirements)
 
 
 def _format_tech_list(tech_items: list) -> str:
-    """Format technology items as bullet list."""
+    """
+    Format a list of technology items into a bullet list.
+
+    Parameters:
+        tech_items (list): List of technology item strings.
+
+    Returns:
+        str: A bullet list formatted string.
+    """
     return '\n'.join(f"• {tech}" for tech in tech_items)

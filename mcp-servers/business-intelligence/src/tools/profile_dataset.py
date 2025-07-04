@@ -8,6 +8,8 @@ import numpy as np
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import json
+import fuzzywuzzy.fuzz
+import fuzzywuzzy.process
 
 
 async def profile_dataset_tool(dataset_name: str, detailed: bool = True, sample_size: int = 10000) -> Dict[str, Any]:
@@ -70,7 +72,7 @@ async def _load_dataset(dataset_name: str) -> Optional[pd.DataFrame]:
     
     base_path = Path(__file__).parent.parent.parent / "data"
     
-    # Try common file patterns
+    # First, try to load by direct dataset_name
     possible_files = [
         base_path / f"{dataset_name}.csv",
         base_path / f"{dataset_name}.xlsx", 
@@ -87,6 +89,32 @@ async def _load_dataset(dataset_name: str) -> Optional[pd.DataFrame]:
                     return pd.read_excel(file_path)
             except Exception:
                 continue
+    
+    # If not found by direct name, try fuzzy matching with available datasets
+    available_datasets_on_disk = await _list_available_datasets()
+    best_match_name = None
+    if available_datasets_on_disk:
+        # Use fuzzy matching to find the closest available dataset name
+        # A score_cutoff of 80 means matches must be at least 80% similar
+        match = fuzzywuzzy.process.extractOne(dataset_name, available_datasets_on_disk, score_cutoff=80)
+        if match:
+            best_match_name, score = match
+            # Try to load the best fuzzy-matched dataset
+            fuzzy_possible_files = [
+                base_path / f"{best_match_name}.csv",
+                base_path / f"{best_match_name}.xlsx",
+                base_path / f"sample_{best_match_name}.csv",
+                base_path / f"sample_{best_match_name}.xlsx"
+            ]
+            for file_path in fuzzy_possible_files:
+                if file_path.exists():
+                    try:
+                        if file_path.suffix.lower() == '.csv':
+                            return pd.read_csv(file_path)
+                        elif file_path.suffix.lower() in ['.xlsx', '.xls']:
+                            return pd.read_excel(file_path)
+                    except Exception:
+                        continue
     
     return None
 
@@ -175,15 +203,20 @@ async def _profile_columns(df: pd.DataFrame, detailed: bool) -> List[Dict[str, A
             }
         }
         
-        # Type-specific analysis
-        if df[col].dtype in [np.int64, np.float64]:
-            col_profile.update(await _profile_numeric_column(df[col], detailed))
-        elif df[col].dtype == 'object':
-            col_profile.update(await _profile_categorical_column(df[col], detailed))
-        elif pd.api.types.is_datetime64_any_dtype(df[col]):
-            col_profile.update(await _profile_datetime_column(df[col], detailed))
-        elif df[col].dtype == 'bool':
-            col_profile.update(await _profile_boolean_column(df[col], detailed))
+        try:
+            # Type-specific analysis
+            if df[col].dtype in [np.int64, np.float64]:
+                col_profile.update(await _profile_numeric_column(df[col], detailed))
+            elif df[col].dtype == 'object':
+                col_profile.update(await _profile_categorical_column(df[col], detailed))
+            elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                col_profile.update(await _profile_datetime_column(df[col], detailed))
+            elif df[col].dtype == 'bool':
+                col_profile.update(await _profile_boolean_column(df[col], detailed))
+            # Handle other dtypes if necessary, or pass through
+        except Exception as col_e:
+            col_profile["error"] = f"Failed to profile column '{col}': {str(col_e)}"
+            col_profile["troubleshooting"] = "Data in this column might be inconsistent or in an unexpected format, or it triggered an edge case in profiling logic. Check for mixed types or unusual values."
         
         column_profiles.append(col_profile)
     

@@ -36,11 +36,14 @@ async def project_kickoff_prompt(
     # Generate stakeholder analysis
     stakeholder_analysis = await _analyze_stakeholders(stakeholder_list, project_classification["type"])
     
-    # Determine project phases
-    suggested_phases = await _suggest_project_phases(project_classification)
+    # FIX: Calculate base estimates first, then align phases with duration
+    temp_estimates = await _calculate_initial_estimates(scope_analysis, project_classification)
     
-    # Calculate initial estimates
-    initial_estimates = await _calculate_initial_estimates(scope_analysis, project_classification)
+    # Determine project phases that match the target duration
+    suggested_phases = await _suggest_project_phases(project_classification, temp_estimates["duration_weeks"])
+    
+    # Recalculate estimates with actual phase duration for consistency
+    initial_estimates = await _calculate_initial_estimates(scope_analysis, project_classification, suggested_phases)
     
     # Generate risk factors
     initial_risks = await _identify_initial_risks(project_classification, scope_analysis)
@@ -158,58 +161,90 @@ async def _analyze_project_scope(scope: str) -> Dict:
 
 
 async def _classify_project(name: str, scope: str) -> Dict:
-    """Classify project type and complexity."""
+    """FIXED: Classify project type and complexity with weighted scoring."""
     
     combined_text = f"{name} {scope}".lower()
     
-    # Project type classification
+    # Project type classification with weighted keywords
     type_indicators = {
-        "software_development": ["app", "software", "website", "platform", "system", "development"],
-        "infrastructure": ["deployment", "infrastructure", "server", "cloud", "devops"],
-        "data_science": ["analytics", "ml", "ai", "data", "model", "prediction"],
-        "research": ["research", "analysis", "study", "investigation", "prototype"],
-        "marketing": ["campaign", "marketing", "brand", "promotion", "launch"],
-        "process_improvement": ["optimization", "process", "workflow", "efficiency", "automation"]
+        "software_development": {
+            "primary": ["app", "software", "website", "platform", "system", "portal", "interface", "frontend", "backend"],
+            "secondary": ["development", "build", "create", "implement", "rollout"]
+        },
+        "infrastructure": {
+            "primary": ["deployment", "infrastructure", "server", "cloud", "devops", "hosting"],
+            "secondary": ["setup", "configuration", "environment"]
+        },
+        "data_science": {
+            "primary": ["analytics", "ml", "ai", "model", "prediction", "algorithm", "machine learning"],
+            "secondary": ["data", "analysis", "insights"]
+        },
+        "research": {
+            "primary": ["research", "study", "investigation", "prototype", "proof of concept"],
+            "secondary": ["analysis", "evaluation", "assessment"]
+        },
+        "marketing": {
+            "primary": ["campaign", "marketing", "brand", "promotion", "launch", "advertising"],
+            "secondary": ["outreach", "engagement", "awareness"]
+        },
+        "process_improvement": {
+            "primary": ["optimization", "process", "workflow", "efficiency", "automation"],
+            "secondary": ["improvement", "streamline", "enhance"]
+        }
     }
     
-    # Complexity indicators
-    complexity_indicators = {
-        "simple": ["prototype", "poc", "simple", "basic", "minimal"],
-        "moderate": ["integration", "api", "database", "user", "interface"],
-        "complex": ["enterprise", "scalable", "microservices", "distributed", "ml", "ai"],
-        "very_complex": ["blockchain", "real-time", "high-performance", "mission-critical"]
-    }
-    
-    # Determine project type
-    project_type = "general"
-    max_matches = 0
-    
+    # Calculate weighted scores for each project type
+    type_scores = {}
     for ptype, keywords in type_indicators.items():
-        matches = sum(1 for keyword in keywords if keyword in combined_text)
-        if matches > max_matches:
-            max_matches = matches
-            project_type = ptype
+        score = 0
+        # Primary keywords get higher weight
+        for keyword in keywords["primary"]:
+            if keyword in combined_text:
+                score += 3
+        # Secondary keywords get lower weight
+        for keyword in keywords["secondary"]:
+            if keyword in combined_text:
+                score += 1
+        type_scores[ptype] = score
     
-    # Determine complexity
+    # Determine project type based on highest score
+    if max(type_scores.values()) == 0:
+        project_type = "software_development"  # Default for unclear cases
+        confidence = 0
+    else:
+        project_type = max(type_scores, key=type_scores.get)
+        confidence = min(type_scores[project_type] * 15, 100)
+    
+    # Complexity indicators (improved order)
+    complexity_indicators = {
+        "very_complex": ["blockchain", "real-time", "high-performance", "mission-critical", "distributed"],
+        "complex": ["enterprise", "scalable", "microservices", "ml", "ai", "integration"],
+        "moderate": ["api", "database", "user", "interface", "authentication", "feedback"],
+        "simple": ["prototype", "poc", "simple", "basic", "minimal"]
+    }
+    
+    # Determine complexity (check from most to least complex)
     complexity = "moderate"  # default
-    for complexity_level, keywords in complexity_indicators.items():
+    for complexity_level in ["very_complex", "complex", "moderate", "simple"]:
+        keywords = complexity_indicators[complexity_level]
         if any(keyword in combined_text for keyword in keywords):
             complexity = complexity_level
+            break
     
     return {
         "type": project_type.replace("_", " ").title(),
         "complexity": complexity,
-        "confidence": min(max_matches * 25, 100)
+        "confidence": confidence
     }
 
 
 async def _analyze_stakeholders(stakeholder_list: List[str], project_type: str) -> Dict:
-    """Analyze stakeholders and suggest roles."""
+    """FIXED: Analyze stakeholders with improved coverage calculation."""
     
     if not stakeholder_list:
         # Suggest default stakeholders based on project type
         default_stakeholders = {
-            "Software Development": ["Product Owner", "Development Team", "QA Team", "DevOps Engineer"],
+            "Software Development": ["Product Manager", "UX Designer", "Backend Engineer", "Frontend Engineer", "QA Lead", "Data Analyst", "Customer Success Lead", "IT Operations"],
             "Infrastructure": ["Infrastructure Team", "Security Team", "Operations Team", "Management"],
             "Data Science": ["Data Scientists", "Data Engineers", "Business Analysts", "Domain Experts"],
             "Research": ["Researchers", "Subject Matter Experts", "Stakeholders", "Review Board"],
@@ -222,16 +257,18 @@ async def _analyze_stakeholders(stakeholder_list: List[str], project_type: str) 
         return {
             "provided": [],
             "suggested": suggested,
-            "analysis": "No stakeholders provided - showing recommended roles",
-            "risk_level": "medium"
+            "analysis": "No stakeholders provided - showing recommended roles for your project type",
+            "coverage_score": 0,
+            "risk_level": "high",
+            "gaps": []
         }
     
-    # Analyze provided stakeholders
+    # Improved role categorization with more keywords
     role_categories = {
-        "decision_makers": ["manager", "director", "executive", "ceo", "cto", "lead"],
-        "technical": ["developer", "engineer", "architect", "qa", "devops", "technical"],
-        "business": ["analyst", "owner", "product", "business", "customer", "user"],
-        "support": ["admin", "support", "operations", "maintenance"]
+        "decision_makers": ["manager", "director", "executive", "ceo", "cto", "lead", "head", "vp", "chief", "product"],
+        "technical": ["developer", "engineer", "architect", "qa", "devops", "technical", "programmer", "backend", "frontend"],
+        "business": ["analyst", "owner", "product", "business", "customer", "user", "stakeholder", "success", "ux", "designer"],
+        "support": ["admin", "support", "operations", "maintenance", "it", "ops"]
     }
     
     categorized = {category: [] for category in role_categories.keys()}
@@ -250,22 +287,33 @@ async def _analyze_stakeholders(stakeholder_list: List[str], project_type: str) 
         if not categorized_flag:
             uncategorized.append(stakeholder)
     
-    # Assess stakeholder coverage
-    coverage_score = sum(1 for cat in categorized.values() if cat) * 25
-    risk_level = "low" if coverage_score >= 75 else "medium" if coverage_score >= 50 else "high"
+    # FIX: Improved coverage calculation
+    required_categories = _get_required_categories(project_type)
+    filled_categories = sum(1 for cat in required_categories if categorized[cat])
+    
+    if required_categories:
+        coverage_score = (filled_categories / len(required_categories)) * 100
+    else:
+        coverage_score = 0
+    
+    # Bonus points for having stakeholders in non-required categories
+    bonus_categories = [cat for cat in categorized.keys() if cat not in required_categories and categorized[cat]]
+    coverage_score = min(100, coverage_score + len(bonus_categories) * 5)
+    
+    risk_level = "low" if coverage_score >= 80 else "medium" if coverage_score >= 60 else "high"
     
     return {
         "provided": stakeholder_list,
         "categorized": categorized,
         "uncategorized": uncategorized,
-        "coverage_score": coverage_score,
+        "coverage_score": int(coverage_score),
         "risk_level": risk_level,
         "gaps": _identify_stakeholder_gaps(categorized, project_type)
     }
 
 
-async def _suggest_project_phases(classification: Dict) -> List[Dict]:
-    """Suggest project phases based on type and complexity."""
+async def _suggest_project_phases(classification: Dict, target_duration: int = None) -> List[Dict]:
+    """FIXED: Suggest project phases based on type and complexity, respecting target duration."""
     
     project_type = classification["type"].lower()
     complexity = classification["complexity"]
@@ -312,22 +360,47 @@ async def _suggest_project_phases(classification: Dict) -> List[Dict]:
         adjusted_phase["duration_weeks"] = max(1, int(phase["duration_weeks"] * multiplier))
         adjusted_phases.append(adjusted_phase)
     
+    # FIX: If target_duration is provided, scale phases to match
+    if target_duration:
+        current_total = sum(phase["duration_weeks"] for phase in adjusted_phases)
+        if current_total != target_duration:
+            scale_factor = target_duration / current_total
+            for phase in adjusted_phases:
+                phase["duration_weeks"] = max(1, round(phase["duration_weeks"] * scale_factor))
+            
+            # Ensure total matches exactly by adjusting the largest phase
+            current_total = sum(phase["duration_weeks"] for phase in adjusted_phases)
+            if current_total != target_duration:
+                largest_phase = max(adjusted_phases, key=lambda p: p["duration_weeks"])
+                largest_phase["duration_weeks"] += (target_duration - current_total)
+    
     return adjusted_phases
 
 
-async def _calculate_initial_estimates(scope_analysis: Dict, classification: Dict) -> Dict:
-    """Calculate initial project estimates."""
+async def _calculate_initial_estimates(scope_analysis: Dict, classification: Dict, suggested_phases: List[Dict] = None) -> Dict:
+    """FIXED: Calculate initial project estimates, ensuring consistency with phases."""
     
-    # Base estimates
-    base_weeks = 8
+    # If phases are provided, use their total duration
+    if suggested_phases:
+        duration_weeks = sum(phase["duration_weeks"] for phase in suggested_phases)
+    else:
+        # Fallback to original calculation
+        base_weeks = 8
+        scope_score = scope_analysis["scope_score"]
+        scope_multiplier = 1 + (scope_score / 100)
+        
+        complexity_multipliers = {
+            "simple": 0.6,
+            "moderate": 1.0,
+            "complex": 1.5,
+            "very_complex": 2.2
+        }
+        
+        complexity_multiplier = complexity_multipliers.get(classification["complexity"], 1.0)
+        duration_weeks = max(4, int(base_weeks * scope_multiplier * complexity_multiplier))
+    
+    # Calculate team size based on complexity
     base_team_size = 4
-    base_cost_per_week = 10000
-    
-    # Scope adjustments
-    scope_score = scope_analysis["scope_score"]
-    scope_multiplier = 1 + (scope_score / 100)
-    
-    # Complexity adjustments
     complexity_multipliers = {
         "simple": 0.6,
         "moderate": 1.0,
@@ -336,11 +409,10 @@ async def _calculate_initial_estimates(scope_analysis: Dict, classification: Dic
     }
     
     complexity_multiplier = complexity_multipliers.get(classification["complexity"], 1.0)
-    
-    # Calculate estimates
-    duration_weeks = max(4, int(base_weeks * scope_multiplier * complexity_multiplier))
     team_size = max(2, int(base_team_size * complexity_multiplier))
     
+    # Calculate costs
+    base_cost_per_week = 10000
     base_cost = duration_weeks * base_cost_per_week * team_size
     
     # Add uncertainty buffer
@@ -421,9 +493,8 @@ def _generate_success_metrics(project_type: str) -> str:
     return metrics.get(project_type, metrics["General"])
 
 
-def _identify_stakeholder_gaps(categorized: Dict, project_type: str) -> List[str]:
-    """Identify missing stakeholder categories."""
-    
+def _get_required_categories(project_type: str) -> List[str]:
+    """Get required stakeholder categories for a project type."""
     required_categories = {
         "Software Development": ["decision_makers", "technical", "business"],
         "Infrastructure": ["decision_makers", "technical", "support"],
@@ -431,7 +502,13 @@ def _identify_stakeholder_gaps(categorized: Dict, project_type: str) -> List[str
         "General": ["decision_makers", "business"]
     }
     
-    required = required_categories.get(project_type, required_categories["General"])
+    return required_categories.get(project_type, required_categories["General"])
+
+
+def _identify_stakeholder_gaps(categorized: Dict, project_type: str) -> List[str]:
+    """Identify missing stakeholder categories."""
+    
+    required = _get_required_categories(project_type)
     gaps = [cat for cat in required if not categorized.get(cat)]
     
     return gaps

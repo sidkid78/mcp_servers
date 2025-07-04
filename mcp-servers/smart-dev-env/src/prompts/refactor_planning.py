@@ -3,232 +3,90 @@ Refactor Planning Prompt
 Safe refactoring workflows with rollback strategies.
 """
 
-from pathlib import Path
-from typing import Dict
-
-
 async def refactor_planning_prompt(target_code: str, goals: str = "") -> str:
     """
-    Plan safe refactoring with rollback strategies.
+    Return INSTRUCTIONS for Claude to plan safe refactoring with rollback strategies.
     """
+    
+    return f"""
+You are a refactoring expert. Plan a safe refactoring strategy for '{target_code}' with goals: "{goals or 'general improvement'}".
 
-    try:
-        refactor_analysis = await _analyze_refactor_target(target_code)
-        refactor_plan = await _create_refactor_plan(refactor_analysis, goals)
-        risk_assessment = await _assess_refactor_risks(refactor_analysis, refactor_plan)
+WORKFLOW TO EXECUTE:
 
-        return f"""
-♻️ **Refactor Planning: {refactor_analysis["name"]}**
+1. **Target Analysis**
+   - Use `analyze_codebase` on '{target_code}' to understand the current state
+   - Identify the scope (single file, module, or entire system)
+   - Assess current code quality, complexity, and maintainability
+   - Check for existing test coverage with `run_tests`
+   - Identify dependencies and potential impact areas
 
-**Target Analysis:**
-{refactor_analysis["summary"]}
+2. **Goal Definition and Strategy**
+   - Based on goals "{goals or 'general improvement'}", define specific objectives:
+     * If performance focused → identify bottlenecks and optimization targets
+     * If maintainability focused → look for code smells, duplication, complexity
+     * If security focused → identify vulnerable patterns and hardening opportunities
+     * If architecture focused → assess structure and design patterns
+   - Prioritize refactoring targets by impact and risk
 
-**Refactoring Goals:**
-{goals or "General code improvement"}
+3. **Risk Assessment**
+   - Evaluate refactoring risks:
+     * Code complexity and interconnectedness
+     * Test coverage gaps
+     * Business critical functionality
+     * Team knowledge and experience
+   - Identify potential breaking changes
+   - Plan mitigation strategies for each risk
 
-**Refactor Plan:**
-{_format_refactor_plan(refactor_plan)}
+4. **Phased Refactoring Plan**
+   Create a detailed, step-by-step plan:
+   
+   **Phase 1: Preparation and Safety**
+   - Establish comprehensive test coverage where missing
+   - Create backup/branch for rollback capability
+   - Document current behavior and edge cases
+   - Set up monitoring for regression detection
+   
+   **Phase 2: Incremental Changes**
+   - Break down refactoring into small, isolated changes
+   - Plan order of operations (dependencies first, then dependents)
+   - Define success criteria for each step
+   - Plan testing strategy for each increment
+   
+   **Phase 3: Validation and Cleanup**
+   - Comprehensive testing strategy
+   - Performance verification if applicable
+   - Code quality metrics comparison
+   - Documentation updates
 
-**Risk Assessment:**
-{_format_risk_assessment(risk_assessment)}
+5. **Rollback Strategy**
+   - Plan specific rollback points and procedures
+   - Identify what triggers a rollback decision
+   - Document how to safely revert changes
+   - Plan communication strategy if rollback needed
 
-**Safety Measures:**
-{_format_safety_measures(risk_assessment)}
+6. **Implementation Recommendations**
+   - Suggest specific refactoring techniques for the identified issues
+   - Recommend tools and approaches for the technology stack
+   - Provide code quality metrics to track improvement
+   - Suggest timeline and resource requirements
 
-**Next Steps:**
-{_suggest_refactor_next_steps(refactor_analysis, refactor_plan)}
+IMPORTANT:
+- Start with `analyze_codebase` on '{target_code}' to understand what you're working with
+- Focus on the specific goals: "{goals or 'general improvement'}"
+- Prioritize safety and incremental progress over speed
+- Make the plan concrete and actionable, not theoretical
+- Consider the actual codebase structure and constraints
 
-**Available Tools:**
-• `analyze-codebase` - Detailed impact analysis
-• `run-tests` - Verify refactoring safety
-• `rollback-changes` - Revert if needed
-• `deploy-preview` - Test in staging
+AVAILABLE TOOLS:
+- `analyze_codebase` - understand current code quality and structure
+- `run_tests` - verify test coverage and establish baselines
+- `check_dependencies` - ensure dependencies won't complicate refactoring
+- `rollback_changes` - for emergency rollbacks if needed
 
-**Related Workflows:**
-• `/smart-dev/code-review` - Review refactored code
-• `/smart-dev/performance-audit` - Verify improvements
+FOLLOW-UP WORKFLOWS:
+- Before starting → use `/smart-dev/code-review` to baseline current quality
+- During refactoring → use tools to verify each step
+- After completion → run `/smart-dev/performance-audit` if applicable
+
+Begin the refactoring analysis and planning now.
 """
-
-    except Exception as e:
-        return f"❌ Refactor planning failed: {str(e)}"
-
-
-async def _analyze_refactor_target(target_code: str) -> Dict:
-    """Analyze the code targeted for refactoring."""
-
-    analysis = {
-        "name": target_code or "Unknown",
-        "summary": "",
-        "type": "unknown",
-        "complexity": "medium",
-        "dependencies": [],
-        "test_coverage": "unknown",
-    }
-
-    if not target_code:
-        analysis["summary"] = "No target specified - analyzing entire codebase"
-        return analysis
-
-    target_path = Path(target_code)
-
-    if target_path.exists():
-        if target_path.is_file():
-            analysis["type"] = "file"
-            analysis["summary"] = f"Single file refactoring: {target_code}"
-        else:
-            analysis["type"] = "directory"
-            files = list(target_path.rglob("*.*"))
-            analysis["summary"] = f"Directory refactoring: {len(files)} files"
-    else:
-        analysis["summary"] = f"Target '{target_code}' not found"
-
-    return analysis
-
-
-async def _create_refactor_plan(analysis: Dict, goals: str) -> Dict:
-    """Create detailed refactoring plan."""
-
-    plan = {"phases": [], "strategies": [], "timeline": "unknown"}
-
-    # Phase 1: Preparation
-    plan["phases"].append(
-        {
-            "name": "Preparation",
-            "steps": [
-                "Create backup of current code",
-                "Run full test suite to establish baseline",
-                "Document current behavior",
-                "Set up monitoring for regressions",
-            ],
-        }
-    )
-
-    # Phase 2: Incremental Changes
-    plan["phases"].append(
-        {
-            "name": "Incremental Refactoring",
-            "steps": [
-                "Make small, isolated changes",
-                "Run tests after each change",
-                "Commit frequently with clear messages",
-                "Monitor for unexpected behavior",
-            ],
-        }
-    )
-
-    # Phase 3: Validation
-    plan["phases"].append(
-        {
-            "name": "Validation",
-            "steps": [
-                "Run comprehensive test suite",
-                "Perform manual testing",
-                "Check performance impact",
-                "Review code quality metrics",
-            ],
-        }
-    )
-
-    # Strategies based on goals
-    if "performance" in goals.lower():
-        plan["strategies"].append("Performance optimization")
-    if "maintainability" in goals.lower():
-        plan["strategies"].append("Code structure improvement")
-    if "security" in goals.lower():
-        plan["strategies"].append("Security enhancement")
-
-    if not plan["strategies"]:
-        plan["strategies"] = ["General code improvement"]
-
-    return plan
-
-
-async def _assess_refactor_risks(analysis: Dict, plan: Dict) -> Dict:
-    """Assess risks associated with refactoring."""
-
-    risks = {"level": "medium", "factors": [], "mitigation": []}
-
-    # Risk factors
-    if analysis["type"] == "directory":
-        risks["factors"].append("Large scope increases complexity")
-        risks["level"] = "high"
-
-    if analysis["test_coverage"] == "unknown":
-        risks["factors"].append("Unknown test coverage")
-        risks["mitigation"].append("Add comprehensive tests before refactoring")
-
-    # Default mitigations
-    risks["mitigation"].extend(
-        [
-            "Use version control for easy rollback",
-            "Make incremental changes",
-            "Test thoroughly at each step",
-        ]
-    )
-
-    return risks
-
-
-def _format_refactor_plan(plan: Dict) -> str:
-    """Format refactoring plan."""
-
-    formatted = []
-
-    for i, phase in enumerate(plan["phases"], 1):
-        formatted.append(f"**Phase {i}: {phase['name']}**")
-        for step in phase["steps"]:
-            formatted.append(f"• {step}")
-        formatted.append("")
-
-    if plan["strategies"]:
-        formatted.append("**Strategies:**")
-        for strategy in plan["strategies"]:
-            formatted.append(f"• {strategy}")
-
-    return "\n".join(formatted)
-
-
-def _format_risk_assessment(risks: Dict) -> str:
-    """Format risk assessment."""
-
-    risk_emoji = (
-        "🔴"
-        if risks["level"] == "high"
-        else "🟡"
-        if risks["level"] == "medium"
-        else "🟢"
-    )
-
-    formatted = [f"{risk_emoji} **Risk Level:** {risks['level'].title()}"]
-
-    if risks["factors"]:
-        formatted.append("\n**Risk Factors:**")
-        for factor in risks["factors"]:
-            formatted.append(f"⚠️ {factor}")
-
-    return "\n".join(formatted)
-
-
-def _format_safety_measures(risks: Dict) -> str:
-    """Format safety measures."""
-
-    if not risks["mitigation"]:
-        return "• Standard refactoring safety practices"
-
-    return "\n".join(f"• {measure}" for measure in risks["mitigation"])
-
-
-def _suggest_refactor_next_steps(analysis: Dict, plan: Dict) -> str:
-    """Suggest next steps for refactoring."""
-
-    steps = [
-        "🔍 Run `analyze-codebase` to understand current state",
-        "🧪 Execute `run-tests` to establish baseline",
-        "📝 Document current behavior and expectations",
-        "🚀 Begin with Phase 1: Preparation",
-    ]
-
-    if analysis["type"] == "directory":
-        steps.insert(1, "📊 Consider breaking down into smaller refactoring tasks")
-
-    return "\n".join(f"• {step}" for step in steps)

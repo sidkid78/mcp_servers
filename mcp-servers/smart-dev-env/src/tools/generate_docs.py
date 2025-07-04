@@ -14,22 +14,21 @@ async def generate_docs_tool(
     """
     Auto-generate documentation from code.
     """
-
     try:
         source_dir = Path(source_path)
         if not source_dir.exists():
             return {"error": f"Source path does not exist: {source_path}"}
 
         output_dir = Path(output_path)
-        output_dir.mkdir(exist_ok=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-        if doc_type == "api":
-            result = await _generate_api_docs(source_dir, output_dir)
-        elif doc_type == "readme":
-            result = await _generate_readme(source_dir, output_dir)
-        else:  # full
-            result = await _generate_full_docs(source_dir, output_dir)
-
+        generators = {
+            "api": _generate_api_docs,
+            "readme": _generate_readme,
+            "full": _generate_full_docs,
+        }
+        generate_func = generators.get(doc_type, _generate_full_docs)
+        result = await generate_func(source_dir, output_dir)
         return result
 
     except Exception as e:
@@ -38,7 +37,6 @@ async def generate_docs_tool(
 
 async def _generate_full_docs(source_dir: Path, output_dir: Path) -> Dict:
     """Generate comprehensive documentation."""
-
     docs_generated = []
 
     # Generate README
@@ -55,16 +53,14 @@ async def _generate_full_docs(source_dir: Path, output_dir: Path) -> Dict:
         "type": "full",
         "files_created": docs_generated,
         "output_directory": str(output_dir),
-        "summary": f"Generated {len(docs_generated)} documentation files",
+        "summary": f"Generated {len(docs_generated)} documentation file(s)",
     }
 
 
 async def _generate_readme(source_dir: Path, output_dir: Path) -> Dict:
     """Generate README.md file."""
-
     try:
         project_name = source_dir.name
-
         readme_content = f"""# {project_name}
 
 ## Overview
@@ -98,7 +94,6 @@ Auto-generated documentation for {project_name}.
 ---
 *This README was auto-generated.*
 """
-
         readme_path = output_dir / "README.md"
         with open(readme_path, "w") as f:
             f.write(readme_content)
@@ -115,37 +110,36 @@ Auto-generated documentation for {project_name}.
 
 async def _generate_api_docs(source_dir: Path, output_dir: Path) -> Dict:
     """Generate API documentation."""
-
     try:
-        # Find source files
-        source_files = []
-        for ext in [".py", ".js", ".ts"]:
-            source_files.extend(source_dir.rglob(f"*{ext}"))
+        # Collect all source files with specified extensions
+        source_files = [
+            file
+            for ext in [".py", ".js", ".ts"]
+            for file in source_dir.rglob(f"*{ext}")
+            if file.is_file()
+        ]
 
         if not source_files:
             return {"error": "No source files found"}
 
-        # Extract API information
+        # Precompile regex pattern for Python function definitions
+        function_pattern = re.compile(r"def\s+(\w+)\s*\([^)]*\):")
+
         functions = []
         for file_path in source_files[:10]:
             try:
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                     content = f.read()
-
-                # Simple function extraction
+                # For .py files, extract function definitions
                 if file_path.suffix == ".py":
-                    matches = re.finditer(r"def\s+(\w+)\s*\([^)]*\):", content)
-                    for match in matches:
-                        functions.append(
-                            {
-                                "name": match.group(1),
-                                "file": str(file_path.relative_to(source_dir)),
-                            }
-                        )
-            except:
+                    for match in function_pattern.finditer(content):
+                        functions.append({
+                            "name": match.group(1),
+                            "file": str(file_path.relative_to(source_dir)),
+                        })
+            except Exception:
                 continue
 
-        # Generate API documentation
         api_content = f"""# API Documentation
 
 ## Functions
@@ -155,7 +149,6 @@ async def _generate_api_docs(source_dir: Path, output_dir: Path) -> Dict:
 ---
 *Generated from source code analysis*
 """
-
         api_path = output_dir / "API.md"
         with open(api_path, "w") as f:
             f.write(api_content)
@@ -163,7 +156,7 @@ async def _generate_api_docs(source_dir: Path, output_dir: Path) -> Dict:
         return {
             "type": "api",
             "files_created": [str(api_path)],
-            "summary": f"Generated API docs for {len(functions)} functions",
+            "summary": f"Generated API docs for {len(functions)} function(s)",
         }
 
     except Exception as e:
@@ -172,7 +165,6 @@ async def _generate_api_docs(source_dir: Path, output_dir: Path) -> Dict:
 
 def _format_functions(functions: List[Dict]) -> str:
     """Format functions for documentation."""
-
     if not functions:
         return "No functions found."
 
@@ -181,5 +173,4 @@ def _format_functions(functions: List[Dict]) -> str:
         formatted.append(f"### {func['name']}")
         formatted.append(f"**File:** `{func['file']}`")
         formatted.append("")
-
     return "\n".join(formatted)
