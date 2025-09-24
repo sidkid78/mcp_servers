@@ -3,6 +3,20 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@tailwind utilities;
+
+.w-doc-coverage {
+  width: var(--doc-coverage-width);
+}
+
+.w-quality-score {
+  width: var(--quality-score-width);
+}
+
+.w-complexity-score {
+  width: var(--complexity-score-width);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -10,7 +10,7 @@ import {
   ErrorState 
 } from '../types';
 
-export const useBiStore = create<BiStore>((set, get) => ({
+export const useBiStore = create<BiStore>((set) => ({
   // Initial state
   datasets: {},
   activeDataset: null,

@@ -4,6 +4,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import path from "path";
 
 interface McpServerConfig {
   id: string;
@@ -12,11 +13,12 @@ interface McpServerConfig {
   command?: string;
   args?: string[];
   url?: string;
+  cwd?: string;
 }
 
 interface McpResponse {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   execution_time?: number;
 }
@@ -37,35 +39,48 @@ class McpClientService {
         name: 'Learning Documentation',
         transport: 'stdio',
         command: 'python',
-        args: ['mcp-servers/learning-documentation/server_fastmcp.py']
+        args: ['server_fastmcp.py'],
+        cwd: path.join(process.cwd(), '..', 'mcp-servers', 'learning-documentation')
       },
       {
         id: 'smart-dev-env',
         name: 'Smart Development Environment',
         transport: 'stdio',
         command: 'python',
-        args: ['mcp-servers/smart-dev-env/server_fastmcp.py']
+        args: ['server_fastmcp.py'],
+        cwd: path.join(process.cwd(), '..', 'mcp-servers', 'smart-dev-env')
       },
       {
         id: 'project-management',
         name: 'Project Management',
         transport: 'stdio',
         command: 'python',
-        args: ['mcp-servers/project-management/server_fastmcp.py']
+        args: ['server_fastmcp.py'],
+        cwd: path.join(process.cwd(), '..', 'mcp-servers', 'project-management')
       },
       {
         id: 'infrastructure-automation',
         name: 'Infrastructure Automation',
         transport: 'stdio',
         command: 'python',
-        args: ['mcp-servers/infrastructure-automation/server_fastmcp.py']
+        args: ['server_fastmcp.py'],
+        cwd: path.join(process.cwd(), '..', 'mcp-servers', 'infrastructure-automation')
       },
       {
         id: 'business-intelligence',
         name: 'Business Intelligence',
         transport: 'stdio',
         command: 'python',
-        args: ['mcp-servers/business-intelligence/server_fastmcp.py']
+        args: ['server_fastmcp.py'],
+        cwd: path.join(process.cwd(), '..', 'mcp-servers', 'business-intelligence-mcp')
+      },
+      {
+        id: 'federal-assistance',
+        name: 'Federal Assistance Intelligence',
+        transport: 'stdio',
+        command: 'python',
+        args: ['server_fastmcp.py'],
+        cwd: path.join(process.cwd(), '..', 'mcp-servers', 'federal-assistance')
       }
     ];
 
@@ -86,7 +101,8 @@ class McpClientService {
       if (config.transport === 'stdio') {
         transport = new StdioClientTransport({
           command: config.command!,
-          args: config.args || []
+          args: config.args || [],
+          cwd: config.cwd
         });
       } else if (config.transport === 'streamable-http') {
         transport = new StreamableHTTPClientTransport(new URL(config.url!));
@@ -118,7 +134,7 @@ class McpClientService {
     }
   }
 
-  async callTool(serverId: string, toolName: string, args: Record<string, any> = {}): Promise<McpResponse> {
+  async callTool(serverId: string, toolName: string, args: Record<string, unknown> = {}): Promise<McpResponse> {
     const client = this.clients.get(serverId);
     if (!client) {
       // Try to connect first
@@ -135,7 +151,7 @@ class McpClientService {
       const startTime = Date.now();
       const result = await this.clients.get(serverId)!.callTool({
         name: toolName,
-        arguments: args
+        arguments: args as Record<string, string>
       });
 
       return {
@@ -152,7 +168,7 @@ class McpClientService {
     }
   }
 
-  async getPrompt(serverId: string, promptName: string, args: Record<string, any> = {}): Promise<McpResponse> {
+  async getPrompt(serverId: string, promptName: string, args: Record<string, unknown> = {}): Promise<McpResponse> {
     const client = this.clients.get(serverId);
     if (!client) {
       const connected = await this.connectToServer(serverId);
@@ -168,7 +184,7 @@ class McpClientService {
       const startTime = Date.now();
       const result = await this.clients.get(serverId)!.getPrompt({
         name: promptName,
-        arguments: args
+        arguments: args as Record<string, string>
       });
 
       return {
@@ -183,6 +199,11 @@ class McpClientService {
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
+  }
+
+  async callPrompt(serverId: string, promptName: string, args: Record<string, unknown> = {}): Promise<McpResponse> {
+    // callPrompt is an alias for getPrompt for consistency with API usage
+    return this.getPrompt(serverId, promptName, args);
   }
 
   async listTools(serverId: string): Promise<McpResponse> {

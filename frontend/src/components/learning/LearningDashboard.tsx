@@ -140,7 +140,7 @@ export default function LearningDashboard() {
   // Render different views based on current state
   if (currentView === 'tutorial') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <Button variant="outline" onClick={() => setCurrentView('dashboard')}>
@@ -155,7 +155,7 @@ export default function LearningDashboard() {
 
   if (currentView === 'create') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <Button variant="outline" onClick={() => setCurrentView('dashboard')}>
@@ -169,13 +169,13 @@ export default function LearningDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Learning Dashboard</h1>
-            <p className="text-gray-600 mt-1">Track your progress and discover new learning opportunities</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Learning Dashboard</h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">Track your progress and discover new learning opportunities</p>
           </div>
           <div className="flex gap-3">
             <Button variant="outline" size="sm">
@@ -259,7 +259,7 @@ export default function LearningDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium text-sm">{activity.title}</h4>
@@ -269,12 +269,12 @@ export default function LearningDashboard() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Progress value={activity.progress} className="flex-1 h-2" />
-                      <span className="text-xs text-gray-500">{activity.progress}%</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{activity.progress}%</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <div className={`w-2 h-2 rounded-full ${getDifficultyColor(activity.difficulty)}`} />
-                      <span className="text-xs text-gray-500 capitalize">{activity.difficulty}</span>
-                      <span className="text-xs text-gray-400">• {activity.lastAccessed}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{activity.difficulty}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">• {activity.lastAccessed}</span>
                     </div>
                   </div>
                   <Button size="sm" variant="outline" onClick={() => setCurrentView('tutorial')}>
@@ -298,16 +298,16 @@ export default function LearningDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               {recommendations.map((rec) => (
-                <div key={rec.id} className="p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div key={rec.id} className="p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                   <div className="flex items-start justify-between mb-2">
                     <h4 className="font-medium text-sm">{rec.title}</h4>
                     <Badge variant={getPriorityColor(rec.priority)} className="text-xs">
                       {rec.priority}
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">{rec.description}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{rec.description}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       <Clock className="w-3 h-3 inline mr-1" />
                       {rec.estimatedTime} min
                     </span>

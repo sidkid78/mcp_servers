@@ -24,7 +24,7 @@ interface QuizRequest {
 interface KnowledgeGapRequest {
   user_id: string;
   topic: string;
-  performance_data?: any;
+  performance_data?: unknown;
   learning_objectives?: string[];
 }
 
@@ -32,7 +32,7 @@ interface ProgressTrackingRequest {
   user_id: string;
   tutorial_id?: string;
   quiz_id?: string;
-  completion_data?: any;
+  completion_data?: unknown;
 }
 
 export class LearningService {
@@ -151,7 +151,7 @@ export class LearningService {
   /**
    * Update content using the update_content tool
    */
-  async updateContent(contentId: string, feedback: any) {
+  async updateContent(contentId: string, feedback: unknown) {
     try {
       const response = await fetch(`${this.baseUrl}/tools/update_content`, {
         method: 'POST',
@@ -171,7 +171,7 @@ export class LearningService {
       return await response.json();
     } catch (error) {
       console.error('Error updating content:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 
@@ -198,7 +198,7 @@ export class LearningService {
       return await response.json();
     } catch (error) {
       console.error('Error exporting curriculum:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 

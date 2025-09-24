@@ -223,12 +223,13 @@ export default function WorkflowNavigation({ discoveredSources, uploadedFiles }:
         setWorkflow(workflow.id, result);
         
         // Extract workflow steps from results
-        const steps: WorkflowStep[] = result.results.steps?.map((stepData: { name: string; args: unknown; result: unknown }) => ({
+        const stepsArray = (result.results as Record<string, unknown>)?.steps as { name?: string; args?: unknown; result?: unknown }[] | undefined;
+        const steps: WorkflowStep[] = Array.isArray(stepsArray) ? stepsArray.map((stepData) => ({
           step: stepData.name || 'Unknown Step',
           status: 'completed' as const,
           result: stepData.result,
           timestamp: new Date()
-        })) || [];
+        })) : [];
         
         setWorkflowSteps(steps);
         setCurrentStep('Workflow completed successfully!');
@@ -349,33 +350,42 @@ export default function WorkflowNavigation({ discoveredSources, uploadedFiles }:
             </div>
             
             {/* Visualizations */}
-            {workflowResults.results?.visualizations && workflowResults.results.visualizations.length > 0 && (
-              <div className="mb-4">
-                <h5 className="font-medium text-green-800 dark:text-green-200 mb-2">Generated Charts:</h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {workflowResults.results.visualizations.map((viz: VisualizationResult, index: number) => (
+            {(() => {
+              const vizArr = (workflowResults.results as { visualizations?: VisualizationResult[] } | undefined)?.visualizations;
+              if (!Array.isArray(vizArr) || vizArr.length === 0) return null;
+              return (
+                <div className="mb-4">
+                  <h5 className="font-medium text-green-800 dark:text-green-200 mb-2">Generated Charts:</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {vizArr.map((viz: VisualizationResult, index: number) => (
                     <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg border">
                       <h6 className="font-medium text-gray-900 dark:text-white mb-2">
                         {viz.visualizationType?.charAt(0).toUpperCase() + viz.visualizationType?.slice(1)} Chart
                       </h6>
                       
                       {/* Simple data preview */}
-                      {viz.chartData && viz.chartData.length > 0 ? (
+                      {Array.isArray(viz.chartData) && viz.chartData.length > 0 ? (
                         <div className="text-sm text-gray-600 dark:text-gray-300">
                           <p>📊 Data points: {viz.chartData.length}</p>
-                          {viz.chartConfig && (
-                            <p>📈 X-axis: {viz.chartConfig.xKey}, Y-axis: {viz.chartConfig.yKey}</p>
-                          )}
+                          {(() => {
+                            const cfg = viz.chartConfig as { xKey?: string; yKey?: string } | undefined;
+                            return cfg?.xKey && cfg?.yKey ? (
+                              <p>📈 X-axis: {cfg.xKey}, Y-axis: {cfg.yKey}</p>
+                            ) : null;
+                          })()}
                           <p>🔧 Chart type: {viz.visualizationType}</p>
                           
                           {/* Actual Chart Rendering */}
-                          {viz.visualizationType === 'line' && viz.chartConfig && (
+                          {(() => {
+                            const cfg = viz.chartConfig as { xKey?: string; yKey?: string } | undefined;
+                            if (viz.visualizationType === 'line' && cfg?.xKey && cfg?.yKey && Array.isArray(viz.chartData)) {
+                              return (
                             <div className="mt-3 h-64 w-full">
                               <ResponsiveContainer width="100%" height="100%">
                                 <RechartsLineChart data={viz.chartData}>
                                   <CartesianGrid strokeDasharray="3 3" />
                                   <XAxis 
-                                    dataKey={viz.chartConfig.xKey} 
+                                    dataKey={cfg.xKey} 
                                     tick={{ fontSize: 10 }}
                                     interval="preserveStartEnd"
                                   />
@@ -383,16 +393,16 @@ export default function WorkflowNavigation({ discoveredSources, uploadedFiles }:
                                     tick={{ fontSize: 10 }}
                                     tickFormatter={(value) => typeof value === 'number' ? value.toLocaleString() : value}
                                   />
-                                  <Tooltip 
-                                    formatter={(value: unknown) => [
-                                      typeof value === 'number' ? value.toLocaleString() : value, 
-                                      viz.chartConfig.yKey
-                                    ]}
-                                    labelFormatter={(label) => `${viz.chartConfig.xKey}: ${label}`}
-                                  />
+                                      <Tooltip 
+                                        formatter={(value: unknown) => [
+                                          (typeof value === 'number' ? value.toLocaleString() : String(value)) as unknown as React.ReactNode, 
+                                          cfg.yKey as string
+                                        ]}
+                                        labelFormatter={(label) => `${cfg.xKey}: ${label}`}
+                                      />
                                   <Line 
                                     type="monotone" 
-                                    dataKey={viz.chartConfig.yKey} 
+                                    dataKey={cfg.yKey as string} 
                                     stroke="#2563eb" 
                                     strokeWidth={2}
                                     dot={false}
@@ -400,15 +410,21 @@ export default function WorkflowNavigation({ discoveredSources, uploadedFiles }:
                                 </RechartsLineChart>
                               </ResponsiveContainer>
                             </div>
-                          )}
+                              );
+                            }
+                            return null;
+                          })()}
 
-                          {viz.visualizationType === 'bar' && viz.chartConfig && (
+                          {(() => {
+                            const cfg = viz.chartConfig as { xKey?: string; yKey?: string } | undefined;
+                            if (viz.visualizationType === 'bar' && cfg?.xKey && cfg?.yKey && Array.isArray(viz.chartData)) {
+                              return (
                             <div className="mt-3 h-64 w-full">
                               <ResponsiveContainer width="100%" height="100%">
                                 <RechartsBarChart data={viz.chartData}>
                                   <CartesianGrid strokeDasharray="3 3" />
                                   <XAxis 
-                                    dataKey={viz.chartConfig.xKey} 
+                                    dataKey={cfg.xKey} 
                                     tick={{ fontSize: 10 }}
                                     interval="preserveStartEnd"
                                   />
@@ -416,38 +432,44 @@ export default function WorkflowNavigation({ discoveredSources, uploadedFiles }:
                                     tick={{ fontSize: 10 }}
                                     tickFormatter={(value) => typeof value === 'number' ? value.toLocaleString() : value}
                                   />
-                                  <Tooltip 
-                                    formatter={(value: unknown) => [
-                                      typeof value === 'number' ? value.toLocaleString() : value, 
-                                      viz.chartConfig.yKey
-                                    ]}
-                                    labelFormatter={(label) => `${viz.chartConfig.xKey}: ${label}`}
-                                  />
+                                      <Tooltip 
+                                        formatter={(value: unknown) => [
+                                          (typeof value === 'number' ? value.toLocaleString() : String(value)) as unknown as React.ReactNode, 
+                                          cfg.yKey as string
+                                        ]}
+                                        labelFormatter={(label) => `${cfg.xKey}: ${label}`}
+                                      />
                                   <Bar 
-                                    dataKey={viz.chartConfig.yKey} 
+                                    dataKey={cfg.yKey as string} 
                                     fill="#2563eb" 
                                   />
                                 </RechartsBarChart>
                               </ResponsiveContainer>
                             </div>
-                          )}
+                              );
+                            }
+                            return null;
+                          })()}
                           
-                          {viz.visualizationType === 'scatter' && viz.chartConfig && (
+                          {(() => {
+                            const cfg = viz.chartConfig as { xKey?: string; yKey?: string } | undefined;
+                            if (viz.visualizationType === 'scatter' && cfg?.xKey && cfg?.yKey && Array.isArray(viz.chartData)) {
+                              return (
                             <div className="mt-3 h-64 w-full">
                               <ResponsiveContainer width="100%" height="100%">
                                 <RechartsScatterChart data={viz.chartData}>
                                   <CartesianGrid strokeDasharray="3 3" />
                                   <XAxis 
                                     type="number"
-                                    dataKey={viz.chartConfig.xKey} 
-                                    name={viz.chartConfig.xKey}
+                                    dataKey={cfg.xKey as string} 
+                                    name={cfg.xKey as string}
                                     tick={{ fontSize: 10 }}
                                     domain={['dataMin', 'dataMax']}
                                   />
                                   <YAxis 
                                     type="number"
-                                    dataKey={viz.chartConfig.yKey}
-                                    name={viz.chartConfig.yKey}
+                                    dataKey={cfg.yKey as string}
+                                    name={cfg.yKey as string}
                                     tick={{ fontSize: 10 }}
                                     domain={['dataMin', 'dataMax']}
                                     tickFormatter={(value) => typeof value === 'number' ? value.toLocaleString() : value}
@@ -467,17 +489,20 @@ export default function WorkflowNavigation({ discoveredSources, uploadedFiles }:
                                 </RechartsScatterChart>
                               </ResponsiveContainer>
                             </div>
-                          )}
+                              );
+                            }
+                            return null;
+                          })()}
                           
                           {/* Show first few data points */}
                           <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs">
                             <strong>Sample data:</strong>
                             <div className="mt-1 space-y-1">
-                              {viz.chartData.slice(0, 3).map((point: Record<string, unknown>, i: number) => (
+                              {Array.isArray(viz.chartData) && viz.chartData.slice(0, 3).map((point: Record<string, unknown>, i: number) => (
                                 <div key={i} className="font-mono">
-                                  {viz.chartConfig?.xKey && viz.chartConfig?.yKey ? (
+                                  {viz.chartConfig && typeof viz.chartConfig === 'object' && 'xKey' in viz.chartConfig && 'yKey' in viz.chartConfig ? (
                                     <span>
-                                      {viz.chartConfig.xKey}: {formatDataValue(point[viz.chartConfig.xKey])} | {viz.chartConfig.yKey}: {formatDataValue(point[viz.chartConfig.yKey])}
+                                      {(viz.chartConfig as { xKey: string }).xKey}: {formatDataValue(point[(viz.chartConfig as { xKey: string }).xKey])} | {(viz.chartConfig as { yKey: string }).yKey}: {formatDataValue(point[(viz.chartConfig as { yKey: string }).yKey])}
                                     </span>
                                   ) : (
                                     <span>{JSON.stringify(point).slice(0, 80)}...</span>
@@ -505,10 +530,11 @@ export default function WorkflowNavigation({ discoveredSources, uploadedFiles }:
                         </div>
                       )}
                     </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             
             {workflowResults.insights.length > 0 && (
               <div className="mb-3">

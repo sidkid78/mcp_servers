@@ -1,5 +1,5 @@
 // Enhanced Gemini Service with Function Calling and Workflow Orchestration
-import { GoogleGenerativeAI, FunctionDeclaration, SchemaType, GenerativeModel, Part } from '@google/generative-ai';
+import { GoogleGenAI, FunctionDeclaration } from '@google/genai';
 import { WorkflowResult } from '../types';
 import { 
   profileDatasetTool, 
@@ -213,12 +213,12 @@ const FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: 'load_datasource',
     description: 'Load and analyze a data source file (CSV, Excel, JSON)',
-    parameters: {
-      type: SchemaType.OBJECT,
+    parametersJsonSchema: {
+      type: 'object',
       properties: {
-        file: { type: SchemaType.OBJECT, description: 'The file to load' },
-        datasetName: { type: SchemaType.STRING, description: 'Name for the dataset' },
-        options: { type: SchemaType.OBJECT, description: 'Loading options' }
+        file: { type: 'object', description: 'The file to load' },
+        datasetName: { type: 'string', description: 'Name for the dataset' },
+        options: { type: 'object', description: 'Loading options' }
       },
       required: ['file', 'datasetName']
     }
@@ -226,12 +226,12 @@ const FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: 'profile_dataset', 
     description: 'Generate comprehensive dataset profiling and quality analysis',
-    parameters: {
-      type: SchemaType.OBJECT,
+    parametersJsonSchema: {
+      type: 'object',
       properties: {
-        datasetName: { type: SchemaType.STRING, description: 'Name of loaded dataset' },
-        detailed: { type: SchemaType.BOOLEAN, description: 'Include detailed analysis' },
-        sampleSize: { type: SchemaType.NUMBER, description: 'Sample size for analysis' }
+        datasetName: { type: 'string', description: 'Name of loaded dataset' },
+        detailed: { type: 'boolean', description: 'Include detailed analysis' },
+        sampleSize: { type: 'number', description: 'Sample size for analysis' }
       },
       required: ['datasetName', 'detailed', 'sampleSize']
     }
@@ -239,13 +239,13 @@ const FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: 'run_correlation',
     description: 'Perform correlation analysis between numerical variables',
-    parameters: {
-      type: SchemaType.OBJECT,
+    parametersJsonSchema: {
+      type: 'object',
       properties: {
-        datasetName: { type: SchemaType.STRING, description: 'Name of loaded dataset' },
-        method: { type: SchemaType.STRING, description: 'Correlation method: pearson, spearman, kendall' },
-        targetColumn: { type: SchemaType.STRING, description: 'Target variable for correlation' },
-        threshold: { type: SchemaType.NUMBER, description: 'Correlation significance threshold' }
+        datasetName: { type: 'string', description: 'Name of loaded dataset' },
+        method: { type: 'string', description: 'Correlation method: pearson, spearman, kendall' },
+        targetColumn: { type: 'string', description: 'Target variable for correlation' },
+        threshold: { type: 'number', description: 'Correlation significance threshold' }
       },
       required: ['datasetName']
     }
@@ -253,14 +253,14 @@ const FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: 'create_visualization',
     description: 'Generate charts and visualizations from data',
-    parameters: {
-      type: SchemaType.OBJECT,
+    parametersJsonSchema: {
+      type: 'object',
       properties: {
-        datasetName: { type: SchemaType.STRING, description: 'Source dataset' },
-        chartType: { type: SchemaType.STRING, description: 'Chart type: bar, line, scatter, etc.' },
-        xColumn: { type: SchemaType.STRING, description: 'X-axis column' },
-        yColumn: { type: SchemaType.STRING, description: 'Y-axis column' },
-        title: { type: SchemaType.STRING, description: 'Chart title' }
+        datasetName: { type: 'string', description: 'Source dataset' },
+        chartType: { type: 'string', description: 'Chart type: bar, line, scatter, etc.' },
+        xColumn: { type: 'string', description: 'X-axis column' },
+        yColumn: { type: 'string', description: 'Y-axis column' },
+        title: { type: 'string', description: 'Chart title' }
       },
       required: ['datasetName', 'chartType', 'xColumn', 'yColumn', 'title']
     }
@@ -268,8 +268,7 @@ const FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
 ];
 
 export class GeminiWorkflowOrchestrator {
-  private genAI: GoogleGenerativeAI | null = null;
-  private model: GenerativeModel | null = null;
+  private genAI: GoogleGenAI | null = null;
   private currentDatasets: Map<string, Record<string, unknown>[]> = new Map();
   private progressCallback?: (step: string, progress: number) => void;
 
@@ -280,10 +279,13 @@ export class GeminiWorkflowOrchestrator {
   private initialize() {
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     if (apiKey) {
-      this.genAI = new GoogleGenerativeAI(apiKey);
-      this.model = this.genAI.getGenerativeModel({ 
-        model: 'gemini-2.5-flash-preview-05-20',
-        tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }]
+      this.genAI = new GoogleGenAI({apiKey:apiKey});
+      this.genAI.models.generateContent({
+        model: 'gemini-2.5-flash',
+        config: {
+          tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }]
+        },
+        contents: 'Hello, world!',
       });
     }
   }
@@ -297,7 +299,7 @@ export class GeminiWorkflowOrchestrator {
     uploadedFiles: File[], 
     params: Record<string, unknown> = {}
   ): Promise<WorkflowResult> {
-    if (!this.model) {
+    if (!this.genAI) {
       throw new Error('Gemini API not configured');
     }
 
@@ -368,8 +370,14 @@ export class GeminiWorkflowOrchestrator {
       this.updateProgress('Initializing AI workflow orchestration...', 30);
 
       // Start the conversation with function calling
-      const chat = this.model.startChat();
-      let result = await chat.sendMessage(fullPrompt);
+      const chat = this.genAI.models.generateContent({
+        model: 'gemini-2.5-flash',
+        config: {
+          tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }]
+        },
+        contents: fullPrompt,
+      });
+      let result = await chat;
 
       let workflowResults: {
         steps: {name: string, args: unknown, result: unknown}[],
@@ -385,27 +393,30 @@ export class GeminiWorkflowOrchestrator {
         analyses: {}
       };
 
-      let iterationCount = 0;
+      const iterationCount = 0;
       const maxIterations = 10; // Prevent infinite loops
 
       // Handle function calls
-      while (result.response.functionCalls() && iterationCount < maxIterations) {
-        iterationCount++;
-        const functionCalls = result.response.functionCalls();
+      while ((result as { response?: { functionCalls?: () => { name: string; args: unknown }[] } }).response?.functionCalls && iterationCount < maxIterations) {
+        const functionCalls = (result as { response?: { functionCalls?: () => { name: string; args: unknown }[] } }).response?.functionCalls?.();
 
         // Check if functionCalls is not empty and is an array
         if (Array.isArray(functionCalls) && functionCalls.length > 0) {
           this.updateProgress(`Executing tool: ${functionCalls.map(fc => fc.name).join(', ')}...`, 50 + (iterationCount * 5));
           
           const toolResponses = await Promise.all(
-            functionCalls.map((functionCall: { name: string, args: unknown }) => this.executeFunctionCall(functionCall, workflowResults))
+            functionCalls.map((functionCall) => this.executeFunctionCall(functionCall, workflowResults))
           );
           
           // Send function responses back to the model
-          const formattedResponses = toolResponses.map((response: { functionResponse: { name: string; response: unknown } }) => ({
-            functionResponse: response.functionResponse
-          }));
-          result = await chat.sendMessage(formattedResponses as (string | Part)[]);
+          const formattedResponses = toolResponses.map((response) => response.functionResponse);
+          result = await this.genAI.models.generateContent({
+            model: 'gemini-2.5-flash',
+            config: {
+              tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }]
+            },
+            contents: formattedResponses as unknown as string,
+          });
         } else {
           // No more function calls, break the loop
           break;
@@ -415,7 +426,8 @@ export class GeminiWorkflowOrchestrator {
       this.updateProgress('Generating final insights...', 90);
 
       // Get the final response with insights
-      const finalResponse = result.response.text();
+      const finalResponse = ((result as { response?: { text?: () => string } }).response?.text?.()) ?? '';
+      console.log(finalResponse);
       this.debugWorkflowState('Final AI Response', finalResponse);
       
       const parsedInsights = this.parseWorkflowResults(finalResponse);

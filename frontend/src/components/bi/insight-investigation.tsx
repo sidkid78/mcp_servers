@@ -919,6 +919,7 @@ interface InvestigationPlan {
    * Generate focus-area specific recommendations.
    */
   function generateFocusRecommendations(focusArea: string, _results: InvestigationResults): string[] {
+    void _results;
     switch (focusArea) {
       case "revenue":
         return [
@@ -953,6 +954,7 @@ interface InvestigationPlan {
    * Generate conclusion for the investigation.
    */
   function generateInvestigationConclusion(focusArea: string, _results: InvestigationResults): string {
+    void _results;
     switch (focusArea) {
       case "revenue":
         return `
@@ -1045,6 +1047,7 @@ interface InvestigationPlan {
    * Format next steps and recommendations.
    */
   function formatNextSteps(recommendations: string[], _focusArea: string): string {
+    void _focusArea;
     const formattedRecs = recommendations.join('\n');
     
     return `

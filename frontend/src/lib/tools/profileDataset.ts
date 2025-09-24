@@ -58,7 +58,7 @@ export class DatasetProfiler {
       const profile = await this.generateComprehensiveProfile(dataToProfile, detailed);
 
       // Add metadata
-      const dataProfile: DataProfile = {
+      const data = {
         overview: profile.overview as DataOverview,
         columns: profile.columns as ColumnProfile[],
         dataQuality: profile.dataQuality as DataQuality,
@@ -70,7 +70,7 @@ export class DatasetProfiler {
 
       return {
         success: true,
-        data: dataProfile,
+        data: data as DataProfile,
         datasetName: dataset.name,
         profilingTimestamp: new Date().toISOString(),
         originalShape: dataset.metadata.shape,
@@ -191,7 +191,7 @@ export class DatasetProfiler {
       } else if (profile.type === 'datetime') {
         profile.timeRange = await this.profileDateTimeColumn(nonNullValues, detailed);
       } else if (profile.type === 'boolean') {
-        profile.distribution = await this.profileBooleanColumn(nonNullValues, detailed);
+        profile.distribution = await this.profileBooleanColumn(nonNullValues);
       }
 
       return profile;
@@ -270,7 +270,7 @@ export class DatasetProfiler {
     if (detailed) {
       stats.topCategories = Object.fromEntries(sorted.slice(0, 10));
       
-      const singleOccurrenceCount = sorted.filter(([ _key, count]) => count === 1).length;
+      const singleOccurrenceCount = sorted.filter(([ , count]) => count === 1).length;
       stats.distribution = {
         singleOccurrenceCount,
         singleOccurrencePercentage: Math.round((singleOccurrenceCount / sorted.length) * 100 * 100) / 100,
@@ -770,6 +770,7 @@ export class DatasetProfiler {
   }
 
   private analyzeValuePatterns(_data: Record<string, unknown>[]): { potentialIdColumns: string[]; contactInfoColumns: { column: string; type: string }[] } { 
+    void _data;
     // Implementation for value pattern analysis
     return {
       potentialIdColumns: [],

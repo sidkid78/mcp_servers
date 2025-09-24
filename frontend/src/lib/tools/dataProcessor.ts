@@ -2,7 +2,28 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { Dataset, DatasetMetadata, ColumnInfo } from '../types';
-import { DataRow } from './biTools';
+
+interface CsvLoadInfo {
+  encoding: string;
+  method: string;
+  errors: Papa.ParseError[];
+  meta: Papa.ParseMeta;
+}
+
+interface ExcelLoadInfo {
+  method: string;
+  sheetName: string;
+  totalSheets: number;
+  sheetNames: string[];
+}
+
+interface JsonLoadInfo {
+  method: string;
+  structureInfo: string;
+  originalType: string;
+}
+
+type LoadInfo = CsvLoadInfo | ExcelLoadInfo | JsonLoadInfo;
 
 export class DataProcessor {
   
@@ -20,7 +41,7 @@ export class DataProcessor {
       // Determine file type and load accordingly
       const fileType = this.getFileType(file.name);
       let data: unknown[] = [];
-      let loadInfo: unknown = {};
+      let loadInfo: Partial<LoadInfo> = {};
       
       switch (fileType) {
         case 'csv':
@@ -45,8 +66,13 @@ export class DataProcessor {
           return { success: false, error: `Unsupported file format: ${fileType}` };
       }
       
+      // Ensure loadInfo is a valid LoadInfo type before passing to generateMetadata
+      if (!('method' in loadInfo)) {
+        return { success: false, error: 'Failed to generate load information' };
+      }
+
       // Generate metadata
-      const metadata = this.generateMetadata(data, loadInfo);
+      const metadata = this.generateMetadata(data, loadInfo as LoadInfo);
       
       // Store in browser memory (equivalent to SQLite storage in Python)
       this.storeInMemory(name, data);
@@ -72,7 +98,7 @@ export class DataProcessor {
   /**
    * Load CSV files with robust parsing
    */
-  private static async loadCSV(file: File): Promise<{ data: unknown[], info: unknown }> {
+  private static async loadCSV(file: File): Promise<{ data: unknown[], info: CsvLoadInfo }> {
     return new Promise((resolve, reject) => {
       Papa.parse(file, {
         header: true,
@@ -104,7 +130,7 @@ export class DataProcessor {
   /**
    * Load Excel files
    */
-  private static async loadExcel(file: File): Promise<{ data: unknown[], info: unknown }> {
+  private static async loadExcel(file: File): Promise<{ data: unknown[], info: ExcelLoadInfo }> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
@@ -160,7 +186,7 @@ export class DataProcessor {
   /**
    * Load JSON files
    */
-  private static async loadJSON(file: File): Promise<{ data: unknown[], info: unknown }> {
+  private static async loadJSON(file: File): Promise<{ data: unknown[], info: JsonLoadInfo }> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
@@ -221,7 +247,7 @@ export class DataProcessor {
   /**
    * Generate comprehensive metadata for the dataset
    */
-  private static generateMetadata(data: unknown[], loadInfo: unknown): DatasetMetadata {
+  private static generateMetadata(data: unknown[], loadInfo: LoadInfo): DatasetMetadata {
     if (!data || data.length === 0) {
       return {
         shape: [0, 0],
@@ -241,7 +267,7 @@ export class DataProcessor {
     
     // Analyze each column
     columns.forEach((colName: string) => {  
-      const values = data.map((row: DataRow) => row[colName as keyof DataRow]).filter((v: unknown) => v !== null && v !== undefined && v !== '') as unknown[];
+      const values = data.map((row) => (row as Record<string, unknown>)[colName]).filter((v) => v !== null && v !== undefined && v !== '') as unknown[];
       const nonNullCount = values.length;
       const nullCount = data.length - nonNullCount;
       const uniqueValues = [...new Set(values)];
@@ -288,7 +314,7 @@ export class DataProcessor {
       missingValues,
       memoryUsage: `${memoryMB} MB`,
       sampleData: data.slice(0, 3) as Record<string, unknown>[],
-      encodingUsed: loadInfo.encoding,
+      encodingUsed: 'encoding' in loadInfo ? loadInfo.encoding : undefined,
       sqlDatabaseStored: false // We're using memory storage instead
     };
   }
@@ -306,7 +332,7 @@ export class DataProcessor {
     const sampleSize = Math.min(values.length, 100);
     const sample = values.slice(0, sampleSize);
     
-    sample.forEach(value => {
+    sample.forEach((value: unknown) => {
       if (typeof value === 'number' && !isNaN(value)) {
         numberCount++;
       } else if (typeof value === 'boolean') {
@@ -405,7 +431,7 @@ export class DataProcessor {
     data: unknown[], 
     query: { 
       select?: string[]; 
-      where?: (row: unknown) => boolean; 
+      where?: (row: Record<string, unknown>) => boolean; 
       groupBy?: string;
       orderBy?: string;
       limit?: number;
@@ -415,12 +441,12 @@ export class DataProcessor {
     
     // Apply WHERE filter
     if (query.where) {
-      result = result.filter(query.where);
+      result = result.filter((row: unknown) => query.where!(row as Record<string, unknown>));
     }
     
     // Apply ORDER BY
     if (query.orderBy) {
-      result.sort((a, b) => {
+      result.sort((a: unknown, b: unknown) => {
         const aVal = (a as Record<string, unknown>)[query.orderBy!];
         const bVal = (b as Record<string, unknown>)[query.orderBy!];
         
@@ -434,9 +460,9 @@ export class DataProcessor {
     
     // Apply SELECT
     if (query.select && query.select.length > 0) {
-      result = result.map(row => {
+      result = result.map((row: unknown) => {
         const newRow: Record<string, unknown> = {};
-        query.select!.forEach(col => {
+        query.select!.forEach((col: string) => {
           newRow[col as string] = (row as Record<string, unknown>)[col as string];
         });
         return newRow;

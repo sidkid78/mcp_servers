@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { FileText, Database, TrendingUp, Users, ArrowRight, CheckCircle } from 'lucide-react';
 import { useBiStore } from '@/lib/store';
 import { GeminiWorkflowOrchestrator } from '@/lib/services/geminiOrchestrator';
@@ -28,12 +28,12 @@ export default function BiDiscovery() {
   const [businessContext, setBusinessContext] = useState<string>('');
   const [discoveryComplete, setDiscoveryComplete] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [aiDiscoveryResults, setAiDiscoveryResults] = useState<WorkflowResult | null>(null);
+  const [aiDiscoveryResults, setAiDiscoveryResults] = useState<WorkflowResult | null>(null as unknown as WorkflowResult);
   const [discoveryProgress, setDiscoveryProgress] = useState<string>('');
   const [discoveryProgressPercent, setDiscoveryProgressPercent] = useState<number>(0);
   
   const { setLoading, setError, clearError } = useBiStore();
-  const geminiOrchestrator = new GeminiWorkflowOrchestrator();
+  const geminiOrchestrator = useMemo(() => new GeminiWorkflowOrchestrator(), []);
 
   const handleFilesUploaded = useCallback(async (files: File[]) => {
     setLoading({ isLoading: true, operation: 'AI-powered data discovery in progress...' });
@@ -252,7 +252,7 @@ export default function BiDiscovery() {
         </div>
 
         {/* AI Discovery Results */}
-        {aiDiscoveryResults && (
+        {!!aiDiscoveryResults && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-sm p-6 mb-8 border border-blue-200 dark:border-blue-800">
             <div className="flex items-center space-x-2 mb-4">
               <div className="bg-blue-600 p-2 rounded-full">
@@ -264,7 +264,7 @@ export default function BiDiscovery() {
             </div>
 
             {/* Key Insights */}
-            {aiDiscoveryResults.insights.length > 0 && (
+            {Array.isArray(aiDiscoveryResults.insights) && aiDiscoveryResults.insights.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
                   💡 Key Business Insights
@@ -281,7 +281,7 @@ export default function BiDiscovery() {
             )}
 
             {/* Recommendations */}
-            {aiDiscoveryResults.recommendations.length > 0 && (
+            {Array.isArray(aiDiscoveryResults.recommendations) && aiDiscoveryResults.recommendations.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
                   🎯 AI Recommendations
@@ -298,34 +298,41 @@ export default function BiDiscovery() {
             )}
 
             {/* Quick Stats from AI Analysis */}
-            {aiDiscoveryResults.results?.profileResults && (
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                  <div className="text-lg font-bold text-blue-600">
-                    {aiDiscoveryResults.results.profileResults.originalShape?.[1] || 0}
+            {(() => {
+              const res = aiDiscoveryResults.results as Record<string, unknown>;
+              const profile = res.profileResults as { originalShape?: [number, number] } | undefined;
+              const corr = res.correlationResults as { strongCorrelations?: unknown[] } | undefined;
+              const viz = res.visualizations as unknown[] | undefined;
+              if (!profile) return null;
+              return (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <div className="text-lg font-bold text-blue-600">
+                      {profile.originalShape?.[1] ?? 0}
+                    </div>
+                    <div className="text-xs text-gray-500">AI-Analyzed Columns</div>
                   </div>
-                  <div className="text-xs text-gray-500">AI-Analyzed Columns</div>
-                </div>
-                <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                  <div className="text-lg font-bold text-green-600">
-                    {aiDiscoveryResults.results.correlationResults?.strongCorrelations?.length || 0}
+                  <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <div className="text-lg font-bold text-green-600">
+                      {corr?.strongCorrelations?.length ?? 0}
+                    </div>
+                    <div className="text-xs text-gray-500">Strong Correlations</div>
                   </div>
-                  <div className="text-xs text-gray-500">Strong Correlations</div>
-                </div>
-                <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                  <div className="text-lg font-bold text-purple-600">
-                    {aiDiscoveryResults.results.visualizations?.length || 0}
+                  <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <div className="text-lg font-bold text-purple-600">
+                      {viz?.length ?? 0}
+                    </div>
+                    <div className="text-xs text-gray-500">Auto-Generated Charts</div>
                   </div>
-                  <div className="text-xs text-gray-500">Auto-Generated Charts</div>
-                </div>
-                <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
-                  <div className="text-lg font-bold text-orange-600">
-                    {aiDiscoveryResults.insights.length + aiDiscoveryResults.recommendations.length}
+                  <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <div className="text-lg font-bold text-orange-600">
+                      {(Array.isArray(aiDiscoveryResults.insights) ? aiDiscoveryResults.insights.length : 0) + (Array.isArray(aiDiscoveryResults.recommendations) ? aiDiscoveryResults.recommendations.length : 0)}
+                    </div>
+                    <div className="text-xs text-gray-500">AI Insights</div>
                   </div>
-                  <div className="text-xs text-gray-500">AI Insights</div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         )}
 

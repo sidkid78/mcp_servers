@@ -67,13 +67,22 @@ class McpService {
   async getStatus(): Promise<McpResponse> {
     try {
       const response = await fetch(`${this.baseUrl}/${this.serverId}?action=status`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Try to parse JSON always; fall back to text and return structured error
+      let payload: unknown = null;
+      try {
+        payload = await response.json();
+      } catch {
+        // ignore JSON parse errors; we'll handle below
       }
 
-      const data = await response.json();
-      return data;
+      if (!response.ok) {
+        const errorMessage =
+          (payload as { error?: string } | null)?.error ||
+          `${response.status} ${response.statusText}`;
+        return { success: false, error: errorMessage };
+      }
+
+      return (payload as McpResponse) || { success: true };
     } catch (error) {
       console.error(`Error getting status for ${this.serverId}:`, error);
       return {

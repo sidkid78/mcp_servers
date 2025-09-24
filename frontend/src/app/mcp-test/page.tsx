@@ -13,7 +13,8 @@ export default function McpTestPage() {
   const [promptName, setPromptName] = useState('content-generation');
   const [toolArgs, setToolArgs] = useState('{"topic": "JavaScript Basics", "difficulty": "beginner"}');
   const [promptArgs, setPromptArgs] = useState('{"topic": "React Components", "audience": "developers"}');
-  const [response, setResponse] = useState<unknown>(null);
+  type McpAnyResponse = Record<string, unknown>;
+  const [response, setResponse] = useState<McpAnyResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const servers = [
@@ -32,7 +33,7 @@ export default function McpTestPage() {
       const client = new McpServiceClient(selectedServer);
       const args = toolArgs ? JSON.parse(toolArgs) : {};
       const result = await client.callTool(toolName, args);
-      setResponse(result);
+      setResponse(result as unknown as McpAnyResponse);
     } catch (error) {
       setResponse({
         success: false,
@@ -51,7 +52,7 @@ export default function McpTestPage() {
       const client = new McpServiceClient(selectedServer);
       const args = promptArgs ? JSON.parse(promptArgs) : {};
       const result = await client.callPrompt(promptName, args);
-      setResponse(result);
+      setResponse(result as unknown as McpAnyResponse);
     } catch (error) {
       setResponse({
         success: false,
@@ -69,7 +70,7 @@ export default function McpTestPage() {
     try {
       const client = new McpServiceClient(selectedServer);
       const result = await client.getStatus();
-      setResponse(result);
+      setResponse(result as unknown as McpAnyResponse);
     } catch (error) {
       setResponse({
         success: false,
@@ -87,7 +88,7 @@ export default function McpTestPage() {
     try {
       const client = new McpServiceClient(selectedServer);
       const result = await client.listTools();
-      setResponse(result);
+      setResponse(result as unknown as McpAnyResponse);
     } catch (error) {
       setResponse({
         success: false,
@@ -105,7 +106,7 @@ export default function McpTestPage() {
     try {
       const client = new McpServiceClient(selectedServer);
       const result = await client.listPrompts();
-      setResponse(result);
+      setResponse(result as unknown as McpAnyResponse);
     } catch (error) {
       setResponse({
         success: false,
@@ -244,13 +245,13 @@ export default function McpTestPage() {
          </CardContent>
       </Card>
 
-      {response && (
+      {!!response && (
         <Card>
           <CardHeader>
             <CardTitle>Response</CardTitle>
             <CardDescription>
-              {response.success ? 'Success' : 'Error'} - 
-              {response.execution_time && ` ${response.execution_time}ms`}
+              {('success' in response ? (response as { success?: boolean }).success : false) ? 'Success' : 'Error'} -
+              {('execution_time' in response && typeof (response as { execution_time?: unknown }).execution_time === 'number') ? ` ${(response as { execution_time: number }).execution_time}ms` : ''}
             </CardDescription>
           </CardHeader>
           <CardContent>

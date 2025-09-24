@@ -1,11 +1,10 @@
 // Gemini AI Integration for Business Intelligence
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GeminiConfig, GeminiRequest, GeminiResponse } from '../types';
+import { GoogleGenAI } from '@google/genai';
+import { GeminiRequest, GeminiResponse } from '../types/index';
 
 class GeminiService {
-  private genAI: GoogleGenerativeAI | null = null;
-  private model: any = null;
-
+  private client: GoogleGenAI | null = null;
+ 
   constructor() {
     this.initialize();
   }
@@ -13,27 +12,29 @@ class GeminiService {
   private initialize() {
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     if (apiKey) {
-      this.genAI = new GoogleGenerativeAI(apiKey);
-      this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      this.client = new GoogleGenAI({ apiKey });
     }
   }
 
   async generateInsights(request: GeminiRequest): Promise<GeminiResponse> {
-    if (!this.model) {
+    if (!this.client) {
       throw new Error('Gemini API not configured. Please set NEXT_PUBLIC_GEMINI_API_KEY environment variable.');
     }
 
     try {
       const prompt = this.buildPrompt(request);
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      return this.parseResponse(text, request.task);
+      const response = await this.client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt
+      });
+
+      return this.parseResponse(response.text || '');
     } catch (error) {
-      console.error('Gemini API error:', error);
+      console.log('Gemini API error:', error);
       throw new Error('Failed to generate insights. Please try again.');
     }
+
+     
   }
 
   private buildPrompt(request: GeminiRequest): string {
@@ -96,7 +97,7 @@ Focus on strategic implications and high-impact recommendations.`;
     }
   }
 
-  private parseResponse(text: string, task: string): GeminiResponse {
+  private parseResponse(text: string): GeminiResponse {
     try {
       // Try to parse as JSON first
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -112,7 +113,7 @@ Focus on strategic implications and high-impact recommendations.`;
         };
       }
     } catch (error) {
-      console.warn('Failed to parse JSON response, falling back to text parsing');
+      console.warn('Failed to parse JSON response, falling back to text parsing', error);
     }
 
     // Fallback to text parsing
@@ -183,7 +184,7 @@ Focus on strategic implications and high-impact recommendations.`;
   }
 
   // Specialized methods for different BI workflows
-  async generateBIDiscoveryInsights(dataSources: any[], businessContext?: string): Promise<GeminiResponse> {
+  async generateBIDiscoveryInsights(dataSources: { size: number, format: string, businessPotential: string }[], businessContext?: string): Promise<GeminiResponse> {
     return this.generateInsights({
       context: `Business Intelligence Discovery: ${dataSources.length} data sources analyzed. Business context: ${businessContext || 'Not specified'}`,
       data: {
@@ -192,13 +193,13 @@ Focus on strategic implications and high-impact recommendations.`;
         formats: [...new Set(dataSources.map(s => s.format))],
         businessAreas: dataSources.map(s => s.businessPotential),
         businessContext
-      },
+      } as Record<string, unknown>,
       task: 'insight_generation',
       focusArea: 'data discovery and business potential'
     });
   }
 
-  async generateCorrelationInsights(correlationData: any): Promise<GeminiResponse> {
+  async generateCorrelationInsights(correlationData: Record<string, unknown>): Promise<GeminiResponse> {
     return this.generateInsights({
       context: 'Correlation analysis results for business intelligence',
       data: correlationData,
@@ -207,7 +208,7 @@ Focus on strategic implications and high-impact recommendations.`;
     });
   }
 
-  async generateTrendAnalysisInsights(trendData: any): Promise<GeminiResponse> {
+  async generateTrendAnalysisInsights(trendData: Record<string, unknown>): Promise<GeminiResponse> {
     return this.generateInsights({
       context: 'Time-series trend analysis for forecasting and pattern detection',
       data: trendData,
@@ -216,7 +217,7 @@ Focus on strategic implications and high-impact recommendations.`;
     });
   }
 
-  async generateExecutiveSummary(analysisResults: any, audience: string = 'CEO'): Promise<GeminiResponse> {
+  async generateExecutiveSummary(analysisResults: Record<string, unknown>, audience: string = 'CEO'): Promise<GeminiResponse> {
     return this.generateInsights({
       context: `Executive summary for ${audience} based on comprehensive business intelligence analysis`,
       data: analysisResults,
@@ -229,7 +230,7 @@ Focus on strategic implications and high-impact recommendations.`;
 export const geminiService = new GeminiService();
 
 // Helper functions for enhancing BI workflows with Gemini insights
-export async function enhanceDataDiscovery(dataSources: any[], businessContext?: string) {
+export async function enhanceDataDiscovery(dataSources: { size: number, format: string, businessPotential: string }[], businessContext?: string) {
   try {
     const insights = await geminiService.generateBIDiscoveryInsights(dataSources, businessContext);
     return insights;
@@ -239,7 +240,7 @@ export async function enhanceDataDiscovery(dataSources: any[], businessContext?:
   }
 }
 
-export async function enhanceCorrelationAnalysis(correlationResults: any) {
+export async function enhanceCorrelationAnalysis(correlationResults: Record<string, unknown>) {
   try {
     const insights = await geminiService.generateCorrelationInsights(correlationResults);
     return insights;
@@ -249,7 +250,7 @@ export async function enhanceCorrelationAnalysis(correlationResults: any) {
   }
 }
 
-export async function enhanceTrendAnalysis(trendResults: any) {
+export async function enhanceTrendAnalysis(trendResults: Record<string, unknown>) {
   try {
     const insights = await geminiService.generateTrendAnalysisInsights(trendResults);
     return insights;
@@ -259,7 +260,7 @@ export async function enhanceTrendAnalysis(trendResults: any) {
   }
 }
 
-export async function generateExecutiveSummary(analysisResults: any, audience: string = 'CEO') {
+export async function generateExecutiveSummary(analysisResults: Record<string, unknown>, audience: string = 'CEO') {
   try {
     const insights = await geminiService.generateExecutiveSummary(analysisResults, audience);
     return insights;

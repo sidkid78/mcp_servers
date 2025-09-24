@@ -286,7 +286,7 @@ interface VisualizationParams {
 interface EnhancedVisualizationResult {
   chart_image?: string;
   chart_type: ChartType;
-  data_summary: Record<string, any>;
+  data_summary: Record<string, unknown>;
   error?: string;
 }
 
@@ -366,7 +366,7 @@ export async function createVisualizationToolEnhanced({
     const visualizationResult = await generateVisualizationEx(data, vizParams);
     
     // Save visualization if output path specified
-    let saveResult: Record<string, any> = {};
+    let saveResult: Record<string, unknown> = {};
     if (outputPath && visualizationResult.chart_image) {
       saveResult = await saveVisualizationEx(visualizationResult, outputPath);
     }
@@ -1500,15 +1500,25 @@ async function autoSelectXColumnEx(data: DataRow[], chartType: ChartType): Promi
 /**
  * Auto-select appropriate Y column based on chart type.
  */
-async function autoSelectYColumnEx(data: DataRow[], chartType: ChartType): Promise<string> {
+async function autoSelectYColumnEx(data: DataRow[], _chartType: ChartType): Promise<string> {
+  const chartType = _chartType;
   // Prefer numeric columns for Y axis
   const columns = Object.keys(data[0] || {});
   const numericColumns = getNumericColumns(data, columns);
-  
+  if (chartType === "bar" || chartType === "pie") {
+    const categoricalColumns = columns.filter(col => !numericColumns.includes(col));
+    if (categoricalColumns.length > 0) {
+      return categoricalColumns[0];
+    }
+  }
   if (numericColumns.length > 0) {
     return numericColumns[0];
   }
-  
+  if (chartType === "histogram") {
+    if (numericColumns.length > 0) {
+      return numericColumns[0];
+    }
+  }
   // Fallback to second column if exists
   return columns[1] || "";
 }
@@ -1519,18 +1529,18 @@ async function autoSelectYColumnEx(data: DataRow[], chartType: ChartType): Promi
 async function validateChartRequirementsEx(
   data: DataRow[],
   params: VisualizationParams
-): Promise<{ status: string } | { error: string; suggestion?: string }> {
+): Promise<{ status: string } | { error: string; suggestion?: string; available_columns?: string[] }> {
   
   const { chart_type: chartType, columns } = params;
   const { x: xCol, y: yCol } = columns;
-  
+    
   const allColumns = Object.keys(data[0] || {});
   const numericColumns = getNumericColumns(data, allColumns);
-  
+  const categoricalColumns = allColumns.filter((col: string) => !numericColumns.includes(col)) as string[];
   switch (chartType) {
     case "scatter":
       if (!xCol || !yCol) {
-        return { error: "Scatter plot requires both X and Y columns" };
+        return { error: "Scatter plot requires both X and Y columns", available_columns: allColumns };
       }
       
       // Both should be numeric for meaningful scatter plot
@@ -1544,26 +1554,29 @@ async function validateChartRequirementsEx(
     
     case "line":
       if (!xCol || !yCol) {
-        return { error: "Line chart requires both X and Y columns" };
+        return { error: "Line chart requires both X and Y columns", available_columns: allColumns };
       }
       break;
     
     case "heatmap":
       if (numericColumns.length < 2) {
-        return { error: "Heatmap requires at least 2 numeric columns" };
+        return { error: "Heatmap requires at least 2 numeric columns", available_columns: allColumns };
       }
       break;
     
     case "pie":
-      if (!xCol) {
-        return { error: "Pie chart requires a categorical column" };
+      if (categoricalColumns.length > 0) {
+        return { error: "Pie chart requires a categorical column", suggestion: "Choose a categorical column"  , available_columns: categoricalColumns };
       }
       
-      // Check if column has reasonable number of categories
-      const uniqueValues = new Set(data.map(row => row[xCol])).size;
+      // Check if column has reasonable number of categories (from rows, not column names)
+      const targetCol = categoricalColumns[0];
+      const uniqueValues = new Set(
+        data.map((row: Record<string, unknown>) => row[targetCol])
+      ).size;
       if (uniqueValues > 10) {
         return {
-          error: `Column '${xCol}' has ${uniqueValues} unique values`,
+          error: `Column '${categoricalColumns[0]}' has ${uniqueValues} unique values`,
           suggestion: "Pie charts work best with 10 or fewer categories"
         };
       }
@@ -1889,17 +1902,26 @@ async function processDataForBarChartEx(
   data: DataRow[],
   xCol: string,
   yCol: string,
-  groupBy: string
-): Promise<{ categories: number; summary: Record<string, any> }> {
+  _groupBy: string
+): Promise<{ categories: number; summary: Record<string, unknown> }> {
   
-  const categories = new Set(data.map(row => row[xCol])).size;
-  
-  let summary: Record<string, any> = {};
+  const categories = new Set(data.map((row: DataRow) => row[xCol])).size;
+  const groupBy = _groupBy;
+  let summary: Record<string, unknown> = {};
+  if (groupBy) {
+    const groupedData: Record<string, number> = {};
+    data.forEach((row: DataRow) => {
+      const key = String(row[groupBy]);
+      const value = convertToNumber(row[yCol]) || 0;
+      groupedData[key] = (groupedData[key] || 0) + value;
+    });
+    summary = groupedData;
+  }
   
   if (yCol) {
     // Grouped analysis
     const groupedData: Record<string, number> = {};
-    data.forEach(row => {
+    data.forEach((row: DataRow) => {
       const key = String(row[xCol]);
       const value = convertToNumber(row[yCol]) || 0;
       groupedData[key] = (groupedData[key] || 0) + value;
@@ -1915,7 +1937,7 @@ async function processDataForBarChartEx(
   } else {
     // Simple count
     const counts: Record<string, number> = {};
-    data.forEach(row => {
+    data.forEach((row: DataRow) => {
       const key = String(row[xCol]);
       counts[key] = (counts[key] || 0) + 1;
     });
@@ -1943,8 +1965,8 @@ async function calculateTrendEx(data: DataRow[], xCol: string, yCol: string): Pr
     }
     
     // Extract numeric values
-    const xValues = data.map(row => convertToNumber(row[xCol])).filter(v => v !== null) as number[];
-    const yValues = data.map(row => convertToNumber(row[yCol])).filter(v => v !== null) as number[];
+    const xValues = data.map((row: DataRow) => convertToNumber(row[xCol])).filter(v => v !== null) as number[];
+    const yValues = data.map((row: DataRow) => convertToNumber(row[yCol])).filter(v => v !== null) as number[];
     
     if (xValues.length < 2 || yValues.length < 2) {
       return { direction: "insufficient_data" };
@@ -1991,23 +2013,23 @@ async function calculateTrendEx(data: DataRow[], xCol: string, yCol: string): Pr
  * Calculate statistical summary for a numeric column.
  */
 async function calculateStatisticsEx(data: DataRow[], column: string): Promise<StatisticalSummaryEx> {
-  const values = data.map(row => convertToNumber(row[column])).filter(v => v !== null) as number[];
+  const values = data.map((row: DataRow) => convertToNumber(row[column])).filter(v => v !== null) as number[];
   
   if (values.length === 0) {
     return { mean: 0, median: 0, std: 0, min: 0, max: 0, count: 0 };
   }
   
   const sortedValues = [...values].sort((a, b) => a - b);
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const mean = values.reduce((a: number, b: number) => a + b, 0) / values.length;
   const median = sortedValues.length % 2 === 0
     ? (sortedValues[sortedValues.length / 2 - 1] + sortedValues[sortedValues.length / 2]) / 2
     : sortedValues[Math.floor(sortedValues.length / 2)];
   
-  const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
+  const variance = values.reduce((a: number, b: number) => a + (b - mean) ** 2, 0) / values.length;
   const std = Math.sqrt(variance);
   
   // Calculate skewness
-  const skewness = values.reduce((a, b) => a + ((b - mean) / std) ** 3, 0) / values.length;
+  const skewness = values.reduce((a: number, b: number) => a + ((b - mean) / std) ** 3, 0) / values.length;
   
   return {
     mean: Math.round(mean * 1000) / 1000,
@@ -2043,7 +2065,7 @@ function findStrongCorrelationsEx(matrix: Record<string, Record<string, number>>
     }
   }
   
-  return correlations.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
+  return correlations.sort((a: CorrelationDataEx, b: CorrelationDataEx) => Math.abs(b.correlation) - Math.abs(a.correlation));
 }
 
 /**
@@ -2053,7 +2075,7 @@ async function calculateCategoryDistributionEx(data: DataRow[], column: string):
   const counts: Record<string, number> = {};
   let total = 0;
   
-  data.forEach(row => {
+  data.forEach((row: DataRow) => {
     const value = String(row[column] || 'Unknown');
     counts[value] = (counts[value] || 0) + 1;
     total++;
@@ -2065,7 +2087,7 @@ async function calculateCategoryDistributionEx(data: DataRow[], column: string):
       count,
       percentage: Math.round((count / total) * 100 * 10) / 10
     }))
-    .sort((a, b) => b.count - a.count)
+    .sort((a: CategoryDataEx, b: CategoryDataEx) => b.count - a.count)
     .slice(0, 10); // Top 10 categories
 }
 
@@ -2077,7 +2099,7 @@ async function calculateMissingDataEx(data: DataRow[]): Promise<Record<string, n
   const columns = Object.keys(data[0] || {});
   
   for (const column of columns) {
-    missingData[column] = data.filter(row => 
+    missingData[column] = data.filter((row: DataRow) => 
       row[column] == null || row[column] === '' || row[column] === undefined
     ).length;
   }

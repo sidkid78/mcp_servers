@@ -629,8 +629,8 @@ async function simulateHypothesisTesting(plan: CorrelationPlan): Promise<Hypothe
 /**
  * Simulate time-lagged correlation analysis.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function simulateTimeLaggedAnalysis(_plan: CorrelationPlan): Promise<TimeLaggedAnalysis> {
+  void _plan;
   return {
     temporal_relationships: [
       {
@@ -660,8 +660,8 @@ async function simulateTimeLaggedAnalysis(_plan: CorrelationPlan): Promise<TimeL
 /**
  * Simulate partial correlation analysis controlling for confounding variables.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function simulatePartialCorrelations(_plan: CorrelationPlan): Promise<PartialCorrelationAnalysis> {
+  void _plan;
   return {
     controlled_correlations: [
       {
@@ -688,8 +688,8 @@ async function simulatePartialCorrelations(_plan: CorrelationPlan): Promise<Part
 /**
  * Simulate statistical validation metrics.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function simulateStatisticalValidation(_plan: CorrelationPlan): Promise<StatisticalValidation> {
+  void _plan;
   return {
     sample_size: 1247,
     power_analysis: {
@@ -809,11 +809,11 @@ Focus on data quality and sample size expansion may reveal stronger patterns.
 /**
  * Generate key insights from correlation analysis.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function generateCorrelationKeyInsights(
   correlationResults: CorrelationResults,
   _plan: CorrelationPlan
 ): string[] {
+  void _plan;
   
   const insights: string[] = [];
   
@@ -856,8 +856,9 @@ function generateCorrelationKeyInsights(
  */
 function generateCausalInsights(
   correlationResults: CorrelationResults,
-  plan: CorrelationPlan
+  _plan: CorrelationPlan
 ): string[] {
+  void _plan;
   
   const causalInsights: string[] = [];
   
@@ -919,8 +920,9 @@ function interpretCorrelationStrength(correlation: number): string {
  */
 function generateCorrelationRecommendations(
   correlationResults: CorrelationResults,
-  plan: CorrelationPlan
+  _plan: CorrelationPlan
 ): string[] {
+  void _plan;
   
   const strongCorrs = correlationResults.strong_correlations;
   const surprisingCorrs = correlationResults.surprising_correlations;
@@ -966,8 +968,9 @@ function generateCorrelationRecommendations(
  */
 function generateCorrelationConclusion(
   correlationResults: CorrelationResults,
-  plan: CorrelationPlan
+  _plan: CorrelationPlan
 ): string {
+  void _plan;
   
   const strongCount = correlationResults.strong_correlations.length;
   const surprisingCount = correlationResults.surprising_correlations.length;

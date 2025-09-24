@@ -8,7 +8,7 @@ import path from 'path';
 
 interface McpResponse {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   execution_time?: number;
 }
@@ -55,12 +55,42 @@ const serverConfigs: Record<string, ServerConfig> = {
     name: 'Business Intelligence',
     command: 'python',
     args: ['server_fastmcp.py'],
-    cwd: path.join(process.cwd(), '..', 'mcp-servers', 'business-intelligence')
+    cwd: path.join(process.cwd(), '..', 'mcp-servers', 'business-intelligence-mcp')
   }
 };
 
 // Cache for MCP clients
 const clientCache = new Map<string, Client>();
+
+// Helper function to create standardized MCP responses
+function createMcpResponse(
+  success: boolean,
+  data?: unknown,
+  error?: string,
+  executionTime?: number
+): McpResponse {
+  const response: McpResponse = { success };
+  
+  if (data !== undefined) {
+    response.data = data;
+  }
+  
+  if (error !== undefined) {
+    response.error = error;
+  }
+  
+  if (executionTime !== undefined) {
+    response.execution_time = executionTime;
+  }
+  
+  return response;
+}
+
+// Helper function to handle errors and create error responses
+function createErrorResponse(error: unknown, executionTime?: number): McpResponse {
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  return createMcpResponse(false, undefined, errorMessage, executionTime);
+}
 
 async function getOrCreateClient(serverId: string): Promise<Client> {
   if (clientCache.has(serverId)) {
@@ -96,13 +126,12 @@ export async function GET(
   const { serverId } = await params;
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
+  const startTime = Date.now();
 
   const config = serverConfigs[serverId];
   if (!config) {
-    return NextResponse.json({
-      success: false,
-      error: `Server ${serverId} not found`
-    }, { status: 404 });
+    const response = createErrorResponse(`Server ${serverId} not found`);
+    return NextResponse.json(response, { status: 404 });
   }
 
   try {
@@ -113,59 +142,72 @@ export async function GET(
         // Try to ping the server to check if it's alive
         try {
           await client.ping();
-          return NextResponse.json({
-            success: true,
-            data: {
+          const response = createMcpResponse(
+            true,
+            {
               serverId: config.id,
               name: config.name,
               status: 'active',
               connected: true,
               lastPing: new Date().toISOString()
-            }
-          });
+            },
+            undefined,
+            Date.now() - startTime
+          );
+          return NextResponse.json(response);
         } catch (error) {
-          return NextResponse.json({
-            success: true,
-            data: {
+          const response = createMcpResponse(
+            true,
+            {
               serverId: config.id,
               name: config.name,
               status: 'error',
               connected: false,
               error: error instanceof Error ? error.message : 'Unknown error'
-            }
-          });
+            },
+            undefined,
+            Date.now() - startTime
+          );
+          return NextResponse.json(response);
         }
 
       case 'tools':
         const toolsResult = await client.listTools();
-        return NextResponse.json({
-          success: true,
-          data: {
+        const toolsResponse = createMcpResponse(
+          true,
+          {
             tools: toolsResult.tools || []
-          }
-        });
+          },
+          undefined,
+          Date.now() - startTime
+        );
+        return NextResponse.json(toolsResponse);
 
       case 'prompts':
         const promptsResult = await client.listPrompts();
-        return NextResponse.json({
-          success: true,
-          data: {
+        const promptsResponse = createMcpResponse(
+          true,
+          {
             prompts: promptsResult.prompts || []
-          }
-        });
+          },
+          undefined,
+          Date.now() - startTime
+        );
+        return NextResponse.json(promptsResponse);
 
       default:
-        return NextResponse.json({
-          success: true,
-          data: config
-        });
+        const defaultResponse = createMcpResponse(
+          true,
+          config,
+          undefined,
+          Date.now() - startTime
+        );
+        return NextResponse.json(defaultResponse);
     }
   } catch (error) {
     console.error(`Error with MCP server ${serverId}:`, error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    const response = createErrorResponse(error, Date.now() - startTime);
+    return NextResponse.json(response, { status: 500 });
   }
 }
 
@@ -176,34 +218,34 @@ export async function POST(
   const { serverId } = await params;
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
+  const startTime = Date.now();
   
   const config = serverConfigs[serverId];
   if (!config) {
-    return NextResponse.json({
-      success: false,
-      error: `Server ${serverId} not found`
-    }, { status: 404 });
+    const response = createErrorResponse(`Server ${serverId} not found`);
+    return NextResponse.json(response, { status: 404 });
   }
 
   try {
     const client = await getOrCreateClient(serverId);
     const body = await request.json();
-    const startTime = Date.now();
 
     switch (action) {
       case 'call-tool':
         const { toolName, arguments: toolArgs } = body;
-        
+
         const toolResult = await client.callTool({
           name: toolName,
           arguments: toolArgs || {}
         });
 
-        return NextResponse.json({
-          success: true,
-          data: toolResult,
-          execution_time: Date.now() - startTime
-        });
+        const toolResponse = createMcpResponse(
+          true,
+          toolResult,
+          undefined,
+          Date.now() - startTime
+        );
+        return NextResponse.json(toolResponse);
 
       case 'get-prompt':
         const { promptName, arguments: promptArgs } = body;
@@ -213,29 +255,27 @@ export async function POST(
           arguments: promptArgs || {}
         });
 
-        return NextResponse.json({
-          success: true,
-          data: promptResult,
-          execution_time: Date.now() - startTime
-        });
+        const promptResponse = createMcpResponse(
+          true,
+          promptResult,
+          undefined,
+          Date.now() - startTime
+        );
+        return NextResponse.json(promptResponse);
 
       default:
-        return NextResponse.json({
-          success: false,
-          error: `Unknown action: ${action}`
-        }, { status: 400 });
+        const response = createErrorResponse(`Unknown action: ${action}`, Date.now() - startTime);
+        return NextResponse.json(response, { status: 400 });
     }
   } catch (error) {
     console.error(`Error executing ${action} on ${serverId}:`, error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    const response = createErrorResponse(error, Date.now() - startTime);
+    return NextResponse.json(response, { status: 500 });
   }
 }
 
-// Cleanup function to close all connections
-export async function cleanup() {
+// Internal cleanup helper (not exported to satisfy Next.js route constraints)
+async function closeAllClients() {
   for (const [serverId, client] of clientCache.entries()) {
     try {
       await client.close();
@@ -244,4 +284,5 @@ export async function cleanup() {
       console.error(`Error closing client for ${serverId}:`, error);
     }
   }
-} 
+}
+void closeAllClients;

@@ -52,15 +52,15 @@ export class DataSourceLoader {
       // Load data based on source type
       const loadResult = await this.loadDataByType(file, sourceType, options);
 
-      if (!loadResult.success) {
-        return loadResult;
+      if (!loadResult.success || !loadResult.data) {
+        return { success: false, error: loadResult.error || 'Unknown load error' };
       }
 
       // Process and validate data
       const processedData = await this.processLoadedData(
-        loadResult.data!.data,
+        loadResult.data.data,
         datasetName,
-        loadResult.data!.metadata
+        (loadResult.data.metadata as { encoding?: string } | undefined) ?? {}
       );
 
       return {
@@ -94,7 +94,7 @@ export class DataSourceLoader {
     file: File,
     sourceType: string,
     options: LoadDataSourceOptions
-  ): Promise<ApiResponse<{ data: Record<string, any>[]; metadata: any }>> {
+  ): Promise<ApiResponse<{ data: Record<string, unknown>[]; metadata: unknown }>> {
     try {
       switch (sourceType) {
         case 'csv':
@@ -121,7 +121,7 @@ export class DataSourceLoader {
   private async loadCSV(
     file: File,
     options: LoadDataSourceOptions
-  ): Promise<ApiResponse<{ data: Record<string, any>[]; metadata: any }>> {
+  ): Promise<ApiResponse<{ data: Record<string, unknown>[]; metadata: unknown }>> {
     return new Promise((resolve) => {
       Papa.parse(file, {
         header: options.header !== false,
@@ -141,7 +141,7 @@ export class DataSourceLoader {
           resolve({
             success: true,
             data: {
-              data: results.data as Record<string, any>[],
+              data: results.data as Record<string, unknown>[],
               metadata: {
                 encoding: 'utf-8',
                 loadMethod: 'papaparse',
@@ -164,7 +164,7 @@ export class DataSourceLoader {
   private async loadExcel(
     file: File,
     options: LoadDataSourceOptions
-  ): Promise<ApiResponse<{ data: Record<string, any>[]; metadata: any }>> {
+  ): Promise<ApiResponse<{ data: Record<string, unknown>[]; metadata: unknown }>> {
     return new Promise((resolve) => {
       const reader = new FileReader();
       
@@ -211,10 +211,10 @@ export class DataSourceLoader {
           }
 
           const headers = jsonData[0] as string[];
-          const dataRows = jsonData.slice(1) as any[][];
+          const dataRows = jsonData.slice(1) as unknown[][];
           
           const records = dataRows.map(row => {
-            const record: Record<string, any> = {};
+            const record: Record<string, unknown> = {};
             headers.forEach((header, index) => {
               record[String(header)] = row[index] || null;
             });
@@ -254,40 +254,40 @@ export class DataSourceLoader {
 
   private async loadJSON(
     file: File,
-    options: LoadDataSourceOptions
-  ): Promise<ApiResponse<{ data: Record<string, any>[]; metadata: any }>> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _options: LoadDataSourceOptions
+  ): Promise<ApiResponse<{ data: Record<string, unknown>[]; metadata: unknown }>> {
     return new Promise((resolve) => {
       const reader = new FileReader();
       
       reader.onload = (e) => {
         try {
           const content = e.target?.result as string;
-          const data = JSON.parse(content);
+          const data: unknown = JSON.parse(content);
 
-          let records: Record<string, any>[];
+          let records: Record<string, unknown>[];
           let structureInfo: string;
 
           if (Array.isArray(data)) {
-            if (data.length > 0 && typeof data[0] === 'object') {
-              records = data;
+            if (data.length > 0 && typeof (data as unknown[])[0] === 'object' && (data as unknown[])[0] !== null) {
+              records = data as Record<string, unknown>[];
               structureInfo = `Array of ${data.length} objects`;
             } else {
-              records = data.map((value, index) => ({ index, value }));
+              records = (data as unknown[]).map((value, index) => ({ index, value }));
               structureInfo = `Array of ${data.length} values`;
             }
           } else if (typeof data === 'object' && data !== null) {
             // Try to find the main data array
-            const mainKey = Object.keys(data).find(key => 
-              Array.isArray(data[key]) && 
-              data[key].length > 0 && 
-              typeof data[key][0] === 'object'
-            );
+            const mainKey = Object.keys(data as Record<string, unknown>).find(key => {
+              const value = (data as Record<string, unknown>)[key];
+              return Array.isArray(value) && value.length > 0 && typeof value[0] === 'object';
+            });
 
             if (mainKey) {
-              records = data[mainKey];
+              records = (data as Record<string, unknown[]>)[mainKey] as Record<string, unknown>[];
               structureInfo = `Object with main data in '${mainKey}' key`;
             } else {
-              records = [data];
+              records = [data as Record<string, unknown>];
               structureInfo = 'Single object flattened to row';
             }
           } else {
@@ -329,7 +329,7 @@ export class DataSourceLoader {
   private async loadJSONL(
     file: File,
     options: LoadDataSourceOptions
-  ): Promise<ApiResponse<{ data: Record<string, any>[]; metadata: any }>> {
+  ): Promise<ApiResponse<{ data: Record<string, unknown>[]; metadata: unknown }>> {
     return new Promise((resolve) => {
       const reader = new FileReader();
       
@@ -337,13 +337,17 @@ export class DataSourceLoader {
         try {
           const content = e.target?.result as string;
           const lines = content.split('\\n').filter(line => line.trim());
-          const records: Record<string, any>[] = [];
+          const records: Record<string, unknown>[] = [];
           const errors: string[] = [];
 
           lines.forEach((line, index) => {
             try {
-              const record = JSON.parse(line);
-              records.push(record);
+              const record = JSON.parse(line) as unknown;
+              if (record && typeof record === 'object') {
+                records.push(record as Record<string, unknown>);
+              } else {
+                throw new Error('Line is not a JSON object');
+              }
             } catch (error) {
               const errorMsg = `Invalid JSON on line ${index + 1}: ${error instanceof Error ? error.message : String(error)}`;
               errors.push(errorMsg);
@@ -401,16 +405,16 @@ export class DataSourceLoader {
   private async loadTSV(
     file: File,
     options: LoadDataSourceOptions
-  ): Promise<ApiResponse<{ data: Record<string, any>[]; metadata: any }>> {
+  ): Promise<ApiResponse<{ data: Record<string, unknown>[]; metadata: unknown }>> {
     // TSV is just CSV with tab delimiter
     const tsvOptions = { ...options, delimiter: '\\t' };
     return this.loadCSV(file, tsvOptions);
   }
 
   private async processLoadedData(
-    data: Record<string, any>[],
+    data: Record<string, unknown>[],
     datasetName: string,
-    loadMetadata: any
+    loadMetadata: { encoding?: string }
   ): Promise<Dataset> {
     // Remove completely empty rows
     const cleanedData = data.filter(row => 
@@ -440,13 +444,13 @@ export class DataSourceLoader {
     };
   }
 
-  private generateColumnInfo(data: Record<string, any>[]): ColumnInfo[] {
+  private generateColumnInfo(data: Record<string, unknown>[]): ColumnInfo[] {
     if (data.length === 0) return [];
 
     const columns = Object.keys(data[0]);
     
     return columns.map(col => {
-      const values = data.map(row => row[col]);
+      const values = data.map(row => (row as Record<string, unknown>)[col]);
       const nonNullValues = values.filter(v => v !== null && v !== undefined);
       const nullCount = values.length - nonNullValues.length;
       
@@ -496,21 +500,21 @@ export class DataSourceLoader {
     });
   }
 
-  private generateDTypes(data: Record<string, any>[]): Record<string, string> {
+  private generateDTypes(data: Record<string, unknown>[]): Record<string, string> {
     if (data.length === 0) return {};
     
     const dtypes: Record<string, string> = {};
     const columns = Object.keys(data[0]);
     
     columns.forEach(col => {
-      const values = data.map(row => row[col]).filter(v => v !== null && v !== undefined);
+      const values = data.map(row => (row as Record<string, unknown>)[col]).filter(v => v !== null && v !== undefined);
       dtypes[col] = this.inferDType(values);
     });
     
     return dtypes;
   }
 
-  private inferDType(values: any[]): string {
+  private inferDType(values: unknown[]): string {
     if (values.length === 0) return 'unknown';
     
     const types = values.map(v => typeof v);
@@ -518,28 +522,34 @@ export class DataSourceLoader {
     
     if (uniqueTypes.has('number') && uniqueTypes.size === 1) return 'number';
     if (uniqueTypes.has('boolean') && uniqueTypes.size === 1) return 'boolean';
-    if (values.every(v => !isNaN(Date.parse(v)))) return 'datetime';
+    if (values.every(v => {
+      if (typeof v === 'string' || typeof v === 'number') {
+        return !isNaN(Date.parse(String(v)));
+      }
+      return false;
+    })) return 'datetime';
     
     return 'string';
   }
 
-  private calculateMissingValues(data: Record<string, any>[]): Record<string, number> {
+  private calculateMissingValues(data: Record<string, unknown>[]): Record<string, number> {
     if (data.length === 0) return {};
     
     const columns = Object.keys(data[0]);
     const missingValues: Record<string, number> = {};
     
     columns.forEach(col => {
-      const nullCount = data.filter(row => 
-        row[col] === null || row[col] === undefined || row[col] === ''
-      ).length;
+      const nullCount = data.filter(row => {
+        const value = (row as Record<string, unknown>)[col];
+        return value === null || value === undefined || value === '';
+      }).length;
       missingValues[col] = nullCount;
     });
     
     return missingValues;
   }
 
-  private estimateMemoryUsage(data: Record<string, any>[]): string {
+  private estimateMemoryUsage(data: Record<string, unknown>[]): string {
     // Rough estimation
     const jsonString = JSON.stringify(data);
     const bytes = new Blob([jsonString]).size;
@@ -549,18 +559,16 @@ export class DataSourceLoader {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  private isDateColumn(values: any[]): boolean {
+  private isDateColumn(values: unknown[]): boolean {
     if (values.length === 0) return false;
     
     // Sample a few values to check
     const sample = values.slice(0, Math.min(10, values.length));
     const validDates = sample.filter(v => {
-      try {
-        const date = new Date(v);
-        return !isNaN(date.getTime());
-      } catch {
-        return false;
+      if (typeof v === 'string' || typeof v === 'number') {
+        return !isNaN(Date.parse(String(v)));
       }
+      return false;
     });
     
     return validDates.length > sample.length * 0.8;

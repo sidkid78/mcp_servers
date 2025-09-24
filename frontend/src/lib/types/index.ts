@@ -2,7 +2,7 @@
 
 export interface Dataset {
   name: string;
-  data: Record<string, any>[];
+  data: Record<string, unknown>[];
   metadata: DatasetMetadata;
   loadedAt: string;
 }
@@ -13,7 +13,7 @@ export interface DatasetMetadata {
   dtypes: Record<string, string>;
   missingValues: Record<string, number>;
   memoryUsage: string;
-  sampleData: Record<string, any>[];
+  sampleData: Record<string, unknown>[];
   encodingUsed?: string;
   sqlDatabaseStored: boolean;
 }
@@ -244,9 +244,9 @@ export interface VisualizationResult {
   datasetName: string;
   visualizationType: ChartType;
   status: 'success' | 'failed';
-  chartData?: any;
-  chartConfig?: any;
-  dataSummary?: any;
+  chartData?: unknown;
+  chartConfig?: unknown;
+  dataSummary?: unknown;
   insights: string[];
   recommendations: string[];
   error?: string;
@@ -330,7 +330,7 @@ export interface SegmentMetric {
 // KPI Dashboard Types
 export interface KPIConfig {
   datasetName: string;
-  kpiConfig?: Record<string, any>;
+  kpiConfig?: Record<string, unknown>;
 }
 
 export interface KPIDashboard {
@@ -376,7 +376,7 @@ export interface WorkflowResult {
   type: 'bi-discovery' | 'insight-investigation' | 'correlation-deep-dive' | 'trend-analysis' | 'executive-summary' | 'action-recommendations';
   status: 'success' | 'failed';
   summary: string;
-  results: any;
+  results: Record<string, unknown>;
   insights: string[];
   recommendations: string[];
   nextSteps: string[];
@@ -391,7 +391,7 @@ export interface GeminiConfig {
 
 export interface GeminiRequest {
   context: string;
-  data: any;
+  data: Record<string, unknown>;
   task: 'insight_generation' | 'pattern_analysis' | 'recommendation' | 'correlation_interpretation' | 'business_summary';
   focusArea?: string;
 }
@@ -406,7 +406,7 @@ export interface GeminiResponse {
 }
 
 // API Response Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;

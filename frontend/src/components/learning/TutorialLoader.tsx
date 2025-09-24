@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import type { ComponentProps } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +9,7 @@ import TutorialViewer from './TutorialViewer';
 import QuizViewer from './QuizViewer';
 import { BookOpen, Clock, Target, Play, Users, Zap } from 'lucide-react';
 
-interface ComprehensiveTutorial {
+export interface ComprehensiveTutorial {
   Response: {
     success: boolean;
     tutorial_id: string;
@@ -55,14 +56,61 @@ interface ComprehensiveTutorial {
     }>;
   };
 }
-
-interface TutorialLoaderProps {
+// Local quiz question type to avoid importing component values as types
+export type QuizQuestion = {
+  question_id: string;
+  question: string;
+  type: 'multiple_choice' | 'true_false';
+  options?: string[];
+  correct_answer: string;
+  explanation: string;
+  points: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+};
+export interface Tutorial {
+  tutorial_id: string;
+  TutorialSection: string;
+  topic: string;
+  learning_style: string;
+    duration_minutes: number;
+    estimated_completion_time: number;
+  tutorial_sections: TutorialSection[];
+  tutorial_structure: {
+    total_sections: number;
+    progression_type: string;
+    practice_ratio: number;
+  };
+}
+export interface TutorialSection {
+  id: string;
+  title: string;
+  type: 'introduction' | 'content' | 'conclusion';
+  duration_minutes: number;
+  content: {
+    main_concepts?: Array<{
+      concept_id: string;
+      title: string;
+      content: {
+        quick_overview: string;
+        step_by_step_guide: string[];
+        practice_activity?: {
+          type: string;
+          description: string;
+        };
+      };
+    }>;
+  };
+}
+export interface TutorialLoaderProps {
   tutorialData?: ComprehensiveTutorial;
-  onTutorialSelect?: (tutorial: any) => void;
+  onTutorialSelect?: (tutorial: Tutorial) => void;
 }
 
 export default function TutorialLoader({ tutorialData, onTutorialSelect }: TutorialLoaderProps) {
-  const [selectedTutorial, setSelectedTutorial] = useState<any>(null);
+  const [selectedTutorial, setSelectedTutorial] = useState<Tutorial | null>(null);
+  type QuizViewerPropsInLoader = ComponentProps<typeof QuizViewer>;
+  type QuizType = QuizViewerPropsInLoader['quiz'];
+  const [selectedQuiz, setSelectedQuiz] = useState<QuizType | null>(null);
   const [viewMode, setViewMode] = useState<'overview' | 'tutorial' | 'quiz'>('overview');
   const [currentTutorial, setCurrentTutorial] = useState<ComprehensiveTutorial | null>(null);
 
@@ -297,9 +345,9 @@ export default function TutorialLoader({ tutorialData, onTutorialSelect }: Tutor
     };
   };
 
-  const generateQuizFromTutorial = (tutorial: ComprehensiveTutorial) => {
+  const generateQuizFromTutorial = (tutorial: ComprehensiveTutorial): QuizType => {
     const { Response } = tutorial;
-    const questions = [];
+    const questions: QuizQuestion[] = [];
     
     Response.learning_objectives.forEach((objective, index) => {
       questions.push({
@@ -327,16 +375,16 @@ export default function TutorialLoader({ tutorialData, onTutorialSelect }: Tutor
       total_points: questions.length * 10,
       time_limit_minutes: 20,
       passing_score: 70
-    };
+    } as QuizType;
   };
 
   const handleStartTutorial = () => {
     if (currentTutorial) {
       const tutorial = convertToTutorialFormat(currentTutorial);
-      setSelectedTutorial(tutorial);
+      setSelectedTutorial(tutorial as unknown as Tutorial);
       setViewMode('tutorial');
       if (onTutorialSelect) {
-        onTutorialSelect(tutorial);
+        onTutorialSelect(tutorial as unknown as Tutorial);
       }
     }
   };
@@ -344,7 +392,7 @@ export default function TutorialLoader({ tutorialData, onTutorialSelect }: Tutor
   const handleStartQuiz = () => {
     if (currentTutorial) {
       const quiz = generateQuizFromTutorial(currentTutorial);
-      setSelectedTutorial(quiz);
+      setSelectedQuiz(quiz);
       setViewMode('quiz');
     }
   };
@@ -378,7 +426,7 @@ export default function TutorialLoader({ tutorialData, onTutorialSelect }: Tutor
     );
   }
 
-  if (viewMode === 'quiz' && selectedTutorial) {
+  if (viewMode === 'quiz' && selectedQuiz) {
     return (
       <div>
         <div className="mb-4">
@@ -386,7 +434,7 @@ export default function TutorialLoader({ tutorialData, onTutorialSelect }: Tutor
             ← Back to Overview
           </Button>
         </div>
-        <QuizViewer quiz={selectedTutorial} />
+        <QuizViewer quiz={selectedQuiz} />
       </div>
     );
   }
@@ -509,7 +557,7 @@ export default function TutorialLoader({ tutorialData, onTutorialSelect }: Tutor
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            What's Next?
+            What&apos;s Next?
           </CardTitle>
         </CardHeader>
         <CardContent>

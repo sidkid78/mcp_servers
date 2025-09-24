@@ -16,7 +16,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-interface QuizQuestion {
+export interface QuizQuestion {
   question_id: string;
   question: string;
   type: 'multiple_choice' | 'true_false';
@@ -27,7 +27,7 @@ interface QuizQuestion {
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
-interface Quiz {
+export interface Quiz {
   quiz_id: string;
   topic: string;
   difficulty_level: string;
@@ -37,14 +37,14 @@ interface Quiz {
   passing_score: number;
 }
 
-interface QuizResult {
+export interface QuizResult {
   questionId: string;
   userAnswer: string;
   isCorrect: boolean;
   pointsEarned: number;
 }
 
-interface QuizViewerProps {
+export  interface QuizViewerProps {
   quiz: Quiz;
   onComplete?: (results: QuizResult[]) => void;
 }
@@ -66,7 +66,7 @@ export default function QuizViewer({ quiz, onComplete }: QuizViewerProps) {
     const timer = setInterval(() => {
       setTimeRemaining(prev => {
         if (prev <= 1) {
-          handleQuizComplete();
+
           return 0;
         }
         return prev - 1;
@@ -74,7 +74,7 @@ export default function QuizViewer({ quiz, onComplete }: QuizViewerProps) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [ timeRemaining ]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -128,10 +128,10 @@ export default function QuizViewer({ quiz, onComplete }: QuizViewerProps) {
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'easy': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'hard': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'easy': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'hard': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
     }
   };
 
@@ -141,58 +141,58 @@ export default function QuizViewer({ quiz, onComplete }: QuizViewerProps) {
 
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-6">
-        <Card>
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               {passed ? (
                 <Trophy className="w-16 h-16 text-yellow-500" />
               ) : (
-                <Target className="w-16 h-16 text-gray-400" />
+                <Target className="w-16 h-16 text-gray-400 dark:text-gray-500" />
               )}
             </div>
-            <CardTitle className="text-2xl">
+            <CardTitle className="text-2xl dark:text-white">
               Quiz {passed ? 'Completed!' : 'Finished'}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="dark:text-gray-300">
               {quiz.topic} • {quiz.difficulty_level}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center">
-              <div className={`text-4xl font-bold ${passed ? 'text-green-600' : 'text-red-600'}`}>
+              <div className={`text-4xl font-bold ${passed ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {score}%
               </div>
-              <p className="text-gray-600 mt-2">
+              <p className="text-gray-600 dark:text-gray-300 mt-2">
                 {results.filter(r => r.isCorrect).length} of {totalQuestions} correct
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
+              <Card className="dark:bg-gray-700 dark:border-gray-600">
                 <CardContent className="pt-6 text-center">
                   <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
-                  <p className="font-semibold">Correct</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="font-semibold dark:text-white">Correct</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                     {results.filter(r => r.isCorrect).length}
                   </p>
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="dark:bg-gray-700 dark:border-gray-600">
                 <CardContent className="pt-6 text-center">
                   <Clock className="w-8 h-8 mx-auto mb-2 text-blue-500" />
-                  <p className="font-semibold">Time Used</p>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="font-semibold dark:text-white">Time Used</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                     {formatTime((quiz.time_limit_minutes * 60) - timeRemaining)}
                   </p>
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="dark:bg-gray-700 dark:border-gray-600">
                 <CardContent className="pt-6 text-center">
                   <Brain className="w-8 h-8 mx-auto mb-2 text-purple-500" />
-                  <p className="font-semibold">Points</p>
-                  <p className="text-2xl font-bold text-purple-600">
+                  <p className="font-semibold dark:text-white">Points</p>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                     {results.reduce((sum, r) => sum + r.pointsEarned, 0)}
                   </p>
                 </CardContent>
@@ -216,13 +216,13 @@ export default function QuizViewer({ quiz, onComplete }: QuizViewerProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{quiz.topic}</h1>
-          <p className="text-gray-600">{quiz.difficulty_level} • {totalQuestions} questions</p>
+          <h1 className="text-2xl font-bold dark:text-white">{quiz.topic}</h1>
+          <p className="text-gray-600 dark:text-gray-300">{quiz.difficulty_level} • {totalQuestions} questions</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <p className="text-sm text-gray-600">Time Remaining</p>
-            <p className={`font-mono text-lg ${timeRemaining < 300 ? 'text-red-600' : 'text-gray-900'}`}>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Time Remaining</p>
+            <p className={`font-mono text-lg ${timeRemaining < 300 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
               {formatTime(timeRemaining)}
             </p>
           </div>
@@ -233,11 +233,11 @@ export default function QuizViewer({ quiz, onComplete }: QuizViewerProps) {
       </div>
 
       {/* Progress */}
-      <Card>
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Progress</span>
-            <span className="text-sm text-gray-600">
+            <span className="text-sm font-medium dark:text-white">Progress</span>
+            <span className="text-sm text-gray-600 dark:text-gray-300">
               Question {currentQuestionIndex + 1} of {totalQuestions}
             </span>
           </div>
@@ -246,10 +246,10 @@ export default function QuizViewer({ quiz, onComplete }: QuizViewerProps) {
       </Card>
 
       {/* Question */}
-      <Card>
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 dark:text-white">
               <Brain className="w-5 h-5" />
               Question {currentQuestionIndex + 1}
             </CardTitle>
@@ -257,7 +257,7 @@ export default function QuizViewer({ quiz, onComplete }: QuizViewerProps) {
               <Badge className={getDifficultyColor(currentQuestion.difficulty)}>
                 {currentQuestion.difficulty}
               </Badge>
-              <Badge variant="outline">
+              <Badge variant="outline" className="dark:border-gray-600 dark:text-gray-300">
                 {currentQuestion.points} pts
               </Badge>
             </div>
@@ -265,7 +265,7 @@ export default function QuizViewer({ quiz, onComplete }: QuizViewerProps) {
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <h3 className="text-lg font-medium mb-4">{currentQuestion.question}</h3>
+            <h3 className="text-lg font-medium mb-4 dark:text-white">{currentQuestion.question}</h3>
             
             {currentQuestion.type === 'multiple_choice' && currentQuestion.options && (
               <div className="space-y-3">
@@ -273,10 +273,10 @@ export default function QuizViewer({ quiz, onComplete }: QuizViewerProps) {
                   <button
                     key={index}
                     onClick={() => handleAnswerSelect(option)}
-                    className={`w-full text-left p-3 border rounded-lg transition-colors ${
+                    className={`w-full text-left p-3 border rounded-lg transition-colors dark:text-white ${
                       currentAnswer === option 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400' 
+                        : 'border-gray-200 hover:border-gray-300 dark:border-gray-600 dark:hover:border-gray-500 dark:bg-gray-700'
                     }`}
                   >
                     {option}
@@ -289,20 +289,20 @@ export default function QuizViewer({ quiz, onComplete }: QuizViewerProps) {
               <div className="space-y-3">
                 <button
                   onClick={() => handleAnswerSelect('True')}
-                  className={`w-full text-left p-3 border rounded-lg transition-colors ${
+                  className={`w-full text-left p-3 border rounded-lg transition-colors dark:text-white ${
                     currentAnswer === 'True' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400' 
+                      : 'border-gray-200 hover:border-gray-300 dark:border-gray-600 dark:hover:border-gray-500 dark:bg-gray-700'
                   }`}
                 >
                   True
                 </button>
                 <button
                   onClick={() => handleAnswerSelect('False')}
-                  className={`w-full text-left p-3 border rounded-lg transition-colors ${
+                  className={`w-full text-left p-3 border rounded-lg transition-colors dark:text-white ${
                     currentAnswer === 'False' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400' 
+                      : 'border-gray-200 hover:border-gray-300 dark:border-gray-600 dark:hover:border-gray-500 dark:bg-gray-700'
                   }`}
                 >
                   False
@@ -312,21 +312,21 @@ export default function QuizViewer({ quiz, onComplete }: QuizViewerProps) {
           </div>
 
           {showExplanation && (
-            <Card className={`${currentAnswer === currentQuestion.correct_answer ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+            <Card className={`${currentAnswer === currentQuestion.correct_answer ? 'border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/20' : 'border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/20'}`}>
               <CardContent className="pt-4">
                 <div className="flex items-start gap-2">
                   {currentAnswer === currentQuestion.correct_answer ? (
-                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
                   ) : (
-                    <XCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                    <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
                   )}
                   <div>
-                    <p className="font-medium mb-2">
+                    <p className="font-medium mb-2 dark:text-white">
                       {currentAnswer === currentQuestion.correct_answer ? 'Correct!' : 'Incorrect'}
                     </p>
-                    <p className="text-sm text-gray-700">{currentQuestion.explanation}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{currentQuestion.explanation}</p>
                     {currentAnswer !== currentQuestion.correct_answer && (
-                      <p className="text-sm mt-2">
+                      <p className="text-sm mt-2 dark:text-gray-300">
                         <strong>Correct answer:</strong> {currentQuestion.correct_answer}
                       </p>
                     )}

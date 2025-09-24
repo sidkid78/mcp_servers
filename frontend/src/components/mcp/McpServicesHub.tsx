@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,9 @@ import {
   Settings,
   Zap,
   CheckCircle,
-  Activity
+  Activity,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 
 interface McpService {
@@ -40,44 +42,7 @@ export default function McpServicesHub({ onServiceSelect }: McpServicesHubProps)
   const [serviceStatuses, setServiceStatuses] = useState<Record<string, { status: string; connected: boolean }>>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Check service statuses on component mount
-  useEffect(() => {
-    checkAllServiceStatuses();
-  }, []);
-
-  const checkAllServiceStatuses = async () => {
-    setIsLoading(true);
-    const statuses: Record<string, { status: string; connected: boolean }> = {};
-    
-    for (const service of mcpServices) {
-      try {
-        const client = new McpServiceClient(service.id);
-        const response = await client.getStatus();
-        
-        if (response.success) {
-          statuses[service.id] = {
-            status: response.data?.status || 'unknown',
-            connected: response.data?.connected || false
-          };
-        } else {
-          statuses[service.id] = {
-            status: 'error',
-            connected: false
-          };
-        }
-      } catch (error) {
-        statuses[service.id] = {
-          status: 'error',
-          connected: false
-        };
-      }
-    }
-    
-    setServiceStatuses(statuses);
-    setIsLoading(false);
-  };
-
-  const mcpServices: McpService[] = [
+  const mcpServices: McpService[] = useMemo(() => ([
     {
       id: 'learning-documentation',
       name: 'Learning Documentation',
@@ -237,7 +202,50 @@ export default function McpServicesHub({ onServiceSelect }: McpServicesHubProps)
       ],
       category: 'business'
     }
-  ];
+  ]), []);
+
+  // (moved useEffect below after callback definition)
+
+  const checkAllServiceStatuses = useCallback(async () => {
+    setIsLoading(true);
+    const statuses: Record<string, { status: string; connected: boolean }> = {};
+    
+    for (const service of mcpServices) {
+      try {
+        const client = new McpServiceClient(service.id);
+        const response = await client.getStatus();
+        
+        if (response.success) {
+          const data = response.data as { status?: string; connected?: boolean } | undefined;
+          statuses[service.id] = {
+            status: data?.status ?? 'unknown',
+            connected: data?.connected ?? false
+          };
+        } else {
+          statuses[service.id] = {
+            status: 'error',
+            connected: false
+          };
+        }
+      } catch (error) {
+        console.error(`Error getting status for ${service.id}:`, error);
+        statuses[service.id] = {
+          status: 'error',
+          connected: false
+        };
+      }
+    }
+    
+    setServiceStatuses(statuses);
+    setIsLoading(false);
+  }, [mcpServices]);
+
+  // Check service statuses on component mount (after callback is defined)
+  useEffect(() => {
+    void checkAllServiceStatuses();
+  }, [checkAllServiceStatuses]);
+
+  
 
   const categories = [
     { id: 'all', name: 'All Services', icon: <Zap className="w-4 h-4" /> },
@@ -251,22 +259,48 @@ export default function McpServicesHub({ onServiceSelect }: McpServicesHubProps)
     ? mcpServices 
     : mcpServices.filter(service => service.category === selectedCategory);
 
-  const getStatusColor = (status: string) => {
+  const getServiceStatus = (serviceId: string) => {
+    const liveStatus = serviceStatuses[serviceId];
+    if (!liveStatus) return 'unknown';
+    
+    if (liveStatus.connected) {
+      return liveStatus.status;
+    } else {
+      return 'inactive';
+    }
+  };
+
+  const getStatusColor = (serviceId: string) => {
+    const status = getServiceStatus(serviceId);
     switch (status) {
       case 'active': return 'bg-green-500';
       case 'inactive': return 'bg-gray-500';
       case 'maintenance': return 'bg-yellow-500';
-      default: return 'bg-gray-500';
+      case 'error': return 'bg-red-500';
+      default: return 'bg-gray-400';
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (serviceId: string) => {
+    const status = getServiceStatus(serviceId);
+    const liveStatus = serviceStatuses[serviceId];
+    
+    if (isLoading && !liveStatus) {
+      return 'Checking...';
+    }
+    
     switch (status) {
       case 'active': return 'Active';
       case 'inactive': return 'Inactive';
       case 'maintenance': return 'Maintenance';
+      case 'error': return 'Error';
       default: return 'Unknown';
     }
+  };
+
+  const isServiceAvailable = (serviceId: string) => {
+    const status = getServiceStatus(serviceId);
+    return status === 'active' || status === 'maintenance';
   };
 
   const handleServiceSelect = (service: McpService) => {
@@ -277,6 +311,8 @@ export default function McpServicesHub({ onServiceSelect }: McpServicesHubProps)
   };
 
   if (selectedService) {
+    const selectedServiceLiveStatus = serviceStatuses[selectedService.id];
+    
     return (
       <div className="max-w-6xl mx-auto p-6">
         <div className="mb-6">
@@ -296,8 +332,13 @@ export default function McpServicesHub({ onServiceSelect }: McpServicesHubProps)
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${getStatusColor(selectedService.status)}`} />
-                <span className="text-sm font-medium">{getStatusText(selectedService.status)}</span>
+                <div className={`w-3 h-3 rounded-full ${getStatusColor(selectedService.id)}`} />
+                <span className="text-sm font-medium">{getStatusText(selectedService.id)}</span>
+                {selectedServiceLiveStatus?.connected && (
+                  <Badge variant="outline" className="text-xs">
+                    Connected
+                  </Badge>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -374,6 +415,12 @@ export default function McpServicesHub({ onServiceSelect }: McpServicesHubProps)
               <p className="text-sm mt-2">
                 Connect to MCP server endpoint: <code className="bg-gray-100 px-2 py-1 rounded">/{selectedService.id}</code>
               </p>
+              {selectedServiceLiveStatus && (
+                <div className="mt-4 text-xs">
+                  <p>Status: {selectedServiceLiveStatus.status}</p>
+                  <p>Connected: {selectedServiceLiveStatus.connected ? 'Yes' : 'No'}</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -384,10 +431,27 @@ export default function McpServicesHub({ onServiceSelect }: McpServicesHubProps)
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">MCP Services Hub</h1>
-        <p className="text-gray-600">
-          Unified interface to all Model Context Protocol servers and their capabilities
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">MCP Services Hub</h1>
+            <p className="text-gray-600">
+              Unified interface to all Model Context Protocol servers and their capabilities
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={checkAllServiceStatuses}
+            disabled={isLoading}
+            className="flex items-center gap-2"
+          >
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            Refresh Status
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-6">
@@ -404,6 +468,13 @@ export default function McpServicesHub({ onServiceSelect }: McpServicesHubProps)
         ))}
       </div>
 
+      {isLoading && Object.keys(serviceStatuses).length === 0 && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin mr-2" />
+          <span>Checking service statuses...</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredServices.map((service) => (
           <Card key={service.id} className="hover:shadow-lg transition-shadow cursor-pointer">
@@ -414,8 +485,13 @@ export default function McpServicesHub({ onServiceSelect }: McpServicesHubProps)
                   <div>
                     <CardTitle className="text-lg">{service.name}</CardTitle>
                     <div className="flex items-center gap-2 mt-1">
-                      <div className={`w-2 h-2 rounded-full ${getStatusColor(service.status)}`} />
-                      <span className="text-xs text-gray-500">{getStatusText(service.status)}</span>
+                      <div className={`w-2 h-2 rounded-full ${getStatusColor(service.id)}`} />
+                      <span className="text-xs text-gray-500">{getStatusText(service.id)}</span>
+                      {serviceStatuses[service.id]?.connected && (
+                        <Badge variant="outline" className="text-xs">
+                          Live
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -455,9 +531,18 @@ export default function McpServicesHub({ onServiceSelect }: McpServicesHubProps)
               <Button 
                 className="w-full mt-4" 
                 onClick={() => handleServiceSelect(service)}
-                disabled={service.status === 'inactive'}
+                disabled={!isServiceAvailable(service.id) && !isLoading}
               >
-                {service.status === 'inactive' ? 'Unavailable' : 'Open Service'}
+                {isLoading && !serviceStatuses[service.id] ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Checking...
+                  </>
+                ) : !isServiceAvailable(service.id) ? (
+                  'Unavailable'
+                ) : (
+                  'Open Service'
+                )}
               </Button>
             </CardContent>
           </Card>
@@ -474,9 +559,9 @@ export default function McpServicesHub({ onServiceSelect }: McpServicesHubProps)
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-green-600">
-              {mcpServices.filter(s => s.status === 'active').length}
+              {Object.values(serviceStatuses).filter(s => s.connected && s.status === 'active').length}
             </div>
-            <div className="text-sm text-gray-600">Active</div>
+            <div className="text-sm text-gray-600">Active & Connected</div>
           </CardContent>
         </Card>
         <Card>
